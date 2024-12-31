@@ -15,5 +15,11 @@
   "bugs": {
     "url": "https://github.com/AliAK30/sgs-apis/issues"
   },
-  "homepage": "https://github.com/AliAK30/sgs-apis#readme"
+  "homepage": "https://github.com/AliAK30/sgs-apis#readme",
+  "dependencies": {
+    "express": "^4.21.2",
+    "mongoose": "^8.9.3",
+    "passport": "^0.7.0",
+    "passport-local-mongoose": "^8.0.0"
+  }
 }
