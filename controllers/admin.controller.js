@@ -1,5 +1,8 @@
 const Admin = require("../models/admin");
+const Student = require("../models/student");
 const jwt = require("jsonwebtoken");
+const csvParser = require("../helpers/csvParser");
+const passwordGenerator = require("password-generator");
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
@@ -60,3 +63,44 @@ exports.deleteAdmin = async (req, res) => {
     }
   );
 };
+
+exports.registerStudents = async (req, res) => {
+  let data = await csvParser(req.body);
+
+  for (index in data) {
+    let student = data[index];
+    if (!student.student_id) {
+      student.student_id = student.email.split("@")[0].toUpperCase();
+    }
+    student.role = "student";
+    const admin = await Admin.findById(req.userId);
+    student.uni_id = admin.uni_id;
+    student.uni_name = admin.uni_name;
+    password = passwordGenerator(8, true);
+    let result = await Student.register(student, password).catch((err) => {
+      console.error(err);
+      return res.status(500).json({ error: err.message });
+    });
+    data[index].password = password
+    
+  }
+  console.log(data);
+res.status(200).send({ message: "All students registered successfully" });
+};
+
+exports.deleteStudent = async (req, res) => {
+    Student.deleteOne({student_id: req.params.studentid}).then(
+        (result) => {
+          if (result.deletedCount>0) {
+            console.log("Student deleted Successfully");
+            res.send("Student deleted successfully");
+            return;
+          }
+          console.log("Not found, Can't be deleted sorry");
+          res.send("Not found, Can't be deleted sorry");
+        },
+        (err) => {
+          res.status(500).send({ message: err });
+        }
+      );
+}

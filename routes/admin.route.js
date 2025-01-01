@@ -1,13 +1,15 @@
 var router = require("express").Router();
 var controller = require("../controllers/admin.controller")
 const verifyJwt = require("../middlewares/verifyJwt")
-const {checkRoleSysAdmin} = require("../middlewares/checkRole")
+const {checkRoleSysAdmin, checkRoleAdmin} = require("../middlewares/checkRole")
 
 router.post("/login", controller.login);
 
 router.use(verifyJwt);
 router.post("/register",checkRoleSysAdmin, controller.registerAdmin);
 router.delete("/delete/admin/:id", checkRoleSysAdmin, controller.deleteAdmin)
+router.delete("/delete/student/:studentid", checkRoleAdmin, controller.deleteStudent)
+router.post("/register/students", checkRoleAdmin, controller.registerStudents)
 
 
 
