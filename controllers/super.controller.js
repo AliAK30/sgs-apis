@@ -102,6 +102,7 @@ exports.deleteSysAdmin = async (req, res) => {
         if(admin){
             console.log("Admin Deleted", admin);
             res.send(admin);
+            return;
         }
         console.log("Not found")
         res.send("Not found")

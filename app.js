@@ -36,7 +36,8 @@ app.use(express.urlencoded({ extended: false }));
 superuserRouter = require("./routes/superuser.route")
 app.use("/superuser", superuserRouter);
 
-
+adminRouter = require("./routes/admin.route")
+app.use("/admin", adminRouter)
 
 //DEVELOPMENT SERVER
 
