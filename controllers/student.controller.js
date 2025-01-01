@@ -126,7 +126,7 @@ exports.calculateLearningStyle = async (req, res) => {
 
     if (result.modifiedCount > 0) {
       console.log("Learning style updated successfully.");
-      res.status(200).send({ message: "Learning style updated successfully." });
+      res.status(200).json({ ls: learning_style, message: "Learning style updated successfully." });
       return;
     } else {
       console.log("No user found to update learning style.");
