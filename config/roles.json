@@ -1,0 +1,5 @@
+{
+    "roles": [
+      "superuser","system_admin", "admin", "student"
+    ]
+}
