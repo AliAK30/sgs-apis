@@ -3,8 +3,8 @@ const passportLocalMongoose = require("passport-local-mongoose");
 
 const Student = new mongoose.Schema({
   student_id: { type: String, required: true, unique: true },
-  first_name: { type: String},
-  last_name: { type: String},
+  first_name: { type: String },
+  last_name: { type: String },
   uni_name: { type: String, required: true },
   uni_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -17,17 +17,23 @@ const Student = new mongoose.Schema({
   gender: { type: String },
   gpa: { type: Number },
   dob: { type: Date },
-  questions: {type: [String]},
+  questions: [{ q: { type: Number }, answer: { type: String } }],
+  learning_style: {
+    dim1: { name: String, score: Number },
+    dim2: { name: String, score: Number },
+    dim3: { name: String, score: Number },
+    dim4: { name: String, score: Number },
+  },
 });
 
 // Middleware to remove time from the Date field
-Student.pre('save', next => {
-    if (this.dob) {
-      // Set the time to midnight (strip time part)
-      this.dob = new Date(this.dob.setHours(0, 0, 0, 0));
-    }
-    next();
-  });
+Student.pre("save", (next) => {
+  if (this.dob) {
+    // Setting the time to midnight (strip time part)
+    this.dob = new Date(this.dob.setHours(0, 0, 0, 0));
+  }
+  next();
+});
 Student.plugin(passportLocalMongoose, { usernameField: "email" });
 
 module.exports = mongoose.model("Student", Student);

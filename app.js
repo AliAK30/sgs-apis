@@ -41,6 +41,9 @@ app.use("/superuser", superuserRouter);
 adminRouter = require("./routes/admin.route")
 app.use("/admin", adminRouter)
 
+studentRouter = require("./routes/student.route")
+app.use("/student", studentRouter)
+
 //DEVELOPMENT SERVER
 
 //Get port from environment and store in Express.
