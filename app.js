@@ -4,7 +4,10 @@ var cors = require("cors");
 var path = require("path");
 var mongoose = require("mongoose");
 var bodyParser = require("body-parser")
-const superuser = require("./models/superuser");
+
+
+
+
 
 
 //DATABASE CONNECTION
@@ -43,6 +46,21 @@ app.use("/admin", adminRouter)
 
 studentRouter = require("./routes/student.route")
 app.use("/student", studentRouter)
+
+//verify email addresses
+app.use("/verify", async (req, res) => {
+  const url = `https://api.quickemailverification.com/v1/verify?email=${req.query.email}&apikey=${process.env.API_KEY}`
+  try {
+    const response = await fetch(url)
+    if (response.status === 200) {
+      res.send(await response.json())
+    }
+    
+  } catch (err) {
+    console.log(err.message)
+    res.status(500).send(err.message)
+  }
+});
 
 //DEVELOPMENT SERVER
 
