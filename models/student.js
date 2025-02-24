@@ -2,9 +2,9 @@ const mongoose = require("mongoose");
 const passportLocalMongoose = require("passport-local-mongoose");
 
 const Student = new mongoose.Schema({
-  student_id: { type: String, required: true, unique: true },
-  first_name: { type: String },
-  last_name: { type: String },
+  student_id: { type: String, required: false, unique: true },
+  first_name: { type: String, required: true },
+  last_name: { type: String, required: true },
   uni_name: { type: String, required: true },
   uni_id: {
     type: mongoose.Schema.Types.ObjectId,
