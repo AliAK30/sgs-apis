@@ -7,7 +7,7 @@
     - main
     
     pool:
-      vmImage: ubuntu-24_04-lts
+      name: Azure Pipelines
     
     stages:
     - stage: Build
