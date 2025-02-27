@@ -30,8 +30,8 @@
           inputs:
             rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
             includeRootFolder: false
-            archiveType: zip
-            archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+            archiveType: 'zip'
+            archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
             replaceExistingArchive: true
-        - upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+        - upload: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
           artifact: drop
