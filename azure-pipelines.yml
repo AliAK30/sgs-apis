@@ -7,7 +7,7 @@
     - main
     
     pool:
-      vmImage: ubuntu-latest
+      vmImage: ubuntu-24_04-lts
     
     stages:
     - stage: Build
