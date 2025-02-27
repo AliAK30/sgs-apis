@@ -7,7 +7,7 @@
     - main
     
     pool:
-      name: Azure Pipelines
+      name: default
     
     stages:
     - stage: Build
