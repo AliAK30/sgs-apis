@@ -37,6 +37,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 //ROUTES
+app.use("./", (req, res) => {
+  res.status(200).send({message:"hello"})
+})
 superuserRouter = require("./routes/superuser.route")
 app.use("/superuser", superuserRouter);
 
