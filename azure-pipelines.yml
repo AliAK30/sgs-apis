@@ -22,11 +22,13 @@
 
     # Step 2: Set environment variables
     - script: |
-        echo "Setting environment variables..."
-        echo "PORT=$(PORT)" >> /home/aliak30/app/.env
-        echo "conString=$(conString)" >> /home/aliak30/app/.env
-        echo "API_KEY=$(API_KEY)" >> /home/aliak30/app/.env
-        echo "JWT_SECRET=$(JWT_SECRET)" >> /home/aliak30/app/.env
+        if ! test -f .env; then
+          echo ".env does not exist, Setting environment variables..."
+          echo "PORT=$(PORT)" >> /home/aliak30/app/.env
+          echo "conString=$(conString)" >> /home/aliak30/app/.env
+          echo "API_KEY=$(API_KEY)" >> /home/aliak30/app/.env
+          echo "JWT_SECRET=$(JWT_SECRET)" >> /home/aliak30/app/.env
+        fi
       displayName: 'Set environment variables'
 
     # Step 3: Install dependencies
