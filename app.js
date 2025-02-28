@@ -8,7 +8,6 @@ var bodyParser = require("body-parser")
 
 
 
-console.log(process.env.conString)
 
 
 //DATABASE CONNECTION
