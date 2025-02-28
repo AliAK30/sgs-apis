@@ -15,10 +15,9 @@
     steps:
     # Step 1: Clone the repository
     - script: |
-        echo "Cloning the repository..."
-        cd /home/aliak30
-        git clone https://github.com/AliAK30/sgs-apis.git app
-        cd app
+        echo "Fetching the repository..."
+        cd /home/aliak30/app
+        git pull
       displayName: 'Clone repository'
 
     # Step 2: Set environment variables
@@ -41,5 +40,5 @@
     - script: |
         echo "Restarting the app..."
         cd /home/aliak30/app
-        pm2 restart index.js --name "my-app" || pm2 start index.js --name "my-app"
+        pm2 restart app.js --name "my-app" || pm2 start app.js --name "my-app"
       displayName: 'Restart app with PM2'
