@@ -1,9 +1,40 @@
 const Student = require("../models/student");
+const passwordGenerator = require("password-generator");
 const jwt = require("jsonwebtoken");
+
+
+exports.register = async (req, res) => {
+  req.body.uni_name = "Muhammad Ali Jinnah University";
+  req.body.uni_id = "677534463f4abf3b23f8b6d1";
+  //let student = req.body
+  const password = passwordGenerator(8, false)
+  
+  Student.register(req.body, password, (err) => {
+    if (err) {
+      
+      switch(err.name)
+      {
+        case 'ValidationError':
+          return res.status(400).send({message: "Please make sure all fields are valid", code: 'VALIDATION_ERROR'});
+        
+        default:
+          console.error(err);
+          return res.status(500).send({message: err.message})
+      }
+      
+    }
+    req.body.password = password;
+    this.login(req, res);
+    //res.status(200).json({ message: "Student registered successfully", student: student });
+  })
+  //student.password = password;
+  //res.status(200).json({ message: "Student registered successfully", student: student });
+
+}
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
-  //console.log(email, password)
+  
   Student.authenticate()(email, password, (err, user) => {
     if (err || !user) {
       //console.log(err)
@@ -18,11 +49,13 @@ exports.login = async (req, res) => {
     });
 
     const temp_user = user.toObject();
+    
     delete temp_user.hash;
     delete temp_user.salt;
+    temp_user.password = password
     res
       .status(200)
-      .json({ message: "Login Successful", user: temp_user, token: token });
+      .send({ message: "Login Successful", user: temp_user, token: token });
   });
 };
 

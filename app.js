@@ -27,12 +27,12 @@ var app = express();
 
 //MIDDLEWARES
 app.use(express.static(path.join(__dirname, "public")));
-app.use(
+/* app.use(
   cors({
-    origin: "http://localhost:5173",
-    credentials: true,
+    origin: "*",
+    credentials: false,
   })
-);
+); */
 app.use(bodyParser.text({ type: 'text/csv', limit: '10mb' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -42,25 +42,10 @@ superuserRouter = require("./routes/superuser.route")
 app.use("/superuser", superuserRouter);
 
 adminRouter = require("./routes/admin.route")
-app.use("/admin", adminRouter)
+app.use("/admin",  cors(), adminRouter) //used cors on admin routes
 
 studentRouter = require("./routes/student.route")
-app.use("/student", studentRouter)
-
-//verify email addresses
-app.use("/verify", async (req, res) => {
-  const url = `https://api.quickemailverification.com/v1/verify?email=${req.query.email}&apikey=${process.env.API_KEY}`
-  try {
-    const response = await fetch(url)
-    if (response.status === 200) {
-      res.send(await response.json())
-    }
-    
-  } catch (err) {
-    console.log(err.message)
-    res.status(500).send(err.message)
-  }
-});
+app.use("/student", cors(), studentRouter) //used cors on student routes
 
 //DEVELOPMENT SERVER
 

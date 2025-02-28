@@ -1,10 +1,11 @@
 const mongoose = require("mongoose");
 const passportLocalMongoose = require("passport-local-mongoose");
+const {roles} = require("../config/roles.json")
 
 const Student = new mongoose.Schema({
   student_id: { type: String, required: false, unique: true },
-  first_name: { type: String, required: true },
-  last_name: { type: String, required: true },
+  first_name: { type: String, required: true, minLength: 2 },
+  last_name: { type: String, required: true, minLength: 2 },
   uni_name: { type: String, required: true },
   uni_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -12,7 +13,7 @@ const Student = new mongoose.Schema({
     required: true,
   },
   email: { type: String, required: true },
-  role: { type: String, required: true },
+  role: { type: String, required: true, enum: roles },
   phone_number: { type: String },
   gender: { type: String },
   gpa: { type: Number },
