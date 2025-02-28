@@ -12,29 +12,34 @@
     variables:
     - group: edumatch_keys
     
-    stages:
-    - stage: Build
-      displayName: Build stage
-      jobs:  
-      - job: Build
-        displayName: Build
-        steps:
-        - task: UseNode@1
-          inputs:
-            version: '16.x'
-          displayName: 'Install Node.js'
-        - script: |
-            npm install
-            npm run build --if-present
-            npm run test --if-present
-          displayName: 'npm install, build and test'
-        - task: ArchiveFiles@2
-          displayName: 'Archive files'
-          inputs:
-            rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
-            includeRootFolder: false
-            archiveType: zip
-            archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
-            replaceExistingArchive: true
-        - upload: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
-          artifact: drop
+    steps:
+    # Step 1: Clone the repository
+    - script: |
+        echo "Cloning the repository..."
+        cd /home/aliak30
+        git clone https://github.com/AliAK30/sgs-apis.git app
+        cd app
+      displayName: 'Clone repository'
+
+    # Step 2: Set environment variables
+    - script: |
+        echo "Setting environment variables..."
+        echo "PORT=$(PORT)" >> /home/aliak30/app/.env
+        echo "conString=$(conString)" >> /home/aliak30/app/.env
+        echo "API_KEY=$(API_KEY)" >> /home/aliak30/app/.env
+        echo "JWT_SECRET=$(JWT_SECRET)" >> /home/aliak30/app/.env
+      displayName: 'Set environment variables'
+
+    # Step 3: Install dependencies
+    - script: |
+        echo "Installing dependencies..."
+        cd /home/aliak30/app
+        npm install --production
+      displayName: 'Install dependencies'
+
+    # Step 4: Restart the app using PM2
+    - script: |
+        echo "Restarting the app..."
+        cd /home/aliak30/app
+        pm2 restart index.js --name "my-app" || pm2 start index.js --name "my-app"
+      displayName: 'Restart app with PM2'
