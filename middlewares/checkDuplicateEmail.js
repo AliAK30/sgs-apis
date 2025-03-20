@@ -2,6 +2,7 @@ const Student = require("../models/student")
 const Admin = require("../models/admin")
 
 checkDuplicateEmail = async (req, res, next) => {
+    console.log("GOT HIT");
 
     let User;
     //console.log(req.headers)
