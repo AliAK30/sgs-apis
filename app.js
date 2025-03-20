@@ -5,10 +5,7 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 var mongoose = require("mongoose");
 var bodyParser = require("body-parser")
 
-const neo4j = require('neo4j-driver')
-
-// Trust the Nginx proxy
-app.set('trust proxy', true);
+//const neo4j = require('neo4j-driver')
 
 //NEO4J CONNECTION
 
