@@ -1,40 +1,45 @@
 const Student = require("../models/student");
 const passwordGenerator = require("password-generator");
 const jwt = require("jsonwebtoken");
-
+const driver = require("../neo4j");
 
 exports.register = async (req, res) => {
   req.body.uni_name = "Muhammad Ali Jinnah University";
   req.body.uni_id = "677534463f4abf3b23f8b6d1";
-  //let student = req.body
-  const password = passwordGenerator(8, false)
-  
+  //req.body.student_id = req.body.email.split("@")[0].toUpperCase();
+
+  const password = passwordGenerator(8, false);
+
   Student.register(req.body, password, (err) => {
     if (err) {
-      
-      switch(err.name)
-      {
-        case 'ValidationError':
-          return res.status(400).send({message: "Please make sure all fields are valid", code: 'VALIDATION_ERROR'});
-        
+      switch (err.name) {
+        case "ValidationError":
+          res
+            .status(400)
+            .send({
+              message: "Please make sure all fields are valid",
+              code: "VALIDATION_ERROR",
+            });
+
         default:
           console.error(err);
-          return res.status(500).send({message: err.message})
+          res.status(500).send({ message: err.message });
       }
-      
+
+      return;
     }
     req.body.password = password;
     this.login(req, res);
     //res.status(200).json({ message: "Student registered successfully", student: student });
-  })
+  });
   //student.password = password;
   //res.status(200).json({ message: "Student registered successfully", student: student });
-
-}
+};
 
 exports.login = async (req, res) => {
+  //console.log("Im here")
   const { email, password } = req.body;
-  
+
   Student.authenticate()(email, password, (err, user) => {
     if (err || !user) {
       //console.log(err)
@@ -49,28 +54,32 @@ exports.login = async (req, res) => {
     });
 
     const temp_user = user.toObject();
-    
+
     delete temp_user.hash;
     delete temp_user.salt;
-    temp_user.password = password
+    temp_user.password = password;
     res
       .status(200)
       .send({ message: "Login Successful", user: temp_user, token: token });
   });
 };
 
+/* $push: {
+  questions: {
+    $each: req.body, // Push multiple objects into the array
+  },
+  
+}, */
+
 exports.updateQuestions = async (req, res) => {
-  console.log(req.body);
+  //console.log(req.body);
 
   try {
     const result = await Student.updateOne(
       { _id: req.userId },
       {
-        $push: {
-          questions: {
-            $each: req.body, // Push multiple objects into the array
-          },
-        },
+        questions: req.body, // Push multiple objects into the array
+        isSurveyCompleted: true,
       }
     );
 
@@ -92,9 +101,10 @@ exports.updateQuestions = async (req, res) => {
 exports.calculateLearningStyle = async (req, res) => {
   try {
     let student = await Student.findById(req.userId);
+
     let active = 0,
       reflective = 0,
-      sensitive = 0,
+      sensing = 0,
       intuitive = 0,
       visual = 0,
       verbal = 0,
@@ -109,7 +119,7 @@ exports.calculateLearningStyle = async (req, res) => {
         }
       } else if (index % 4 == 1) {
         if (student.questions[index].answer == "a") {
-          sensitive++;
+          sensing++;
         } else {
           intuitive++;
         }
@@ -127,27 +137,27 @@ exports.calculateLearningStyle = async (req, res) => {
         }
       }
     }
-    //console.log(active,reflective, sensitive, intuitive, visual, verbal, global, sequential)
+    //console.log(active,reflective, sensing, intuitive, visual, verbal, global, sequential)
     let learning_style = {};
     if (active > reflective) {
-      learning_style.dim1 = { name: "active", score: active - reflective };
+      learning_style.dim1 = { name: "Active", score: active - reflective };
     } else {
-      learning_style.dim1 = { name: "reflective", score: reflective - active };
+      learning_style.dim1 = { name: "Reflective", score: reflective - active };
     }
-    if (sensitive > intuitive) {
-      learning_style.dim2 = { name: "sensitive", score: sensitive - intuitive };
+    if (sensing > intuitive) {
+      learning_style.dim2 = { name: "Sensing", score: sensing - intuitive };
     } else {
-      learning_style.dim2 = { name: "intuitive", score: intuitive - sensitive };
+      learning_style.dim2 = { name: "Intuitive", score: intuitive - sensing };
     }
     if (visual > verbal) {
-      learning_style.dim3 = { name: "visual", score: visual - verbal };
+      learning_style.dim3 = { name: "Visual", score: visual - verbal };
     } else {
-      learning_style.dim3 = { name: "verbal", score: verbal - visual };
+      learning_style.dim3 = { name: "Verbal", score: verbal - visual };
     }
     if (global > sequential) {
-      learning_style.dim4 = { name: "global", score: global - sequential };
+      learning_style.dim4 = { name: "Global", score: global - sequential };
     } else {
-      learning_style.dim4 = { name: "sequential", score: sequential - global };
+      learning_style.dim4 = { name: "Sequential", score: sequential - global };
     }
     //console.log(learning_style)
     const result = await Student.updateOne(
@@ -157,15 +167,17 @@ exports.calculateLearningStyle = async (req, res) => {
       }
     );
 
-    if (result.modifiedCount > 0) {
+    if (result.modifiedCount >= 0) {
       console.log("Learning style updated successfully.");
-      res.status(200).json({ ls: learning_style, message: "Learning style updated successfully." });
-      return;
-    } else {
-      console.log("No user found to update learning style.");
+      student.learning_style = learning_style;
+      addToGraph(student);
       res
-        .status(404)
-        .send({ message: "No user found to update learning style." });
+        .status(200)
+        .json({
+          student: student,
+          message: "Learning style updated successfully.",
+        });
+      return;
     }
   } catch (error) {
     console.error("Error identifing learning style:", error);
@@ -173,3 +185,34 @@ exports.calculateLearningStyle = async (req, res) => {
     return;
   }
 };
+
+
+const addToGraph = async (student) => {
+  
+  try {
+    let { records } = await driver.executeQuery(
+      "CREATE (p:Student{id: $id, name: $name }) RETURN p",
+      { id: student.id, name: `${student.first_name} ${student.last_name}` },
+      { database: "neo4j" }
+    );
+    
+
+    for(let i = 0; i < 44; i++)
+    {
+        const name = `${student.questions[i].answer}${student.questions[i].q}`
+        let {records} = await driver.executeQuery(
+            'MATCH (s:Student {id: $id}) MATCH (o:Option {name: $name}) CREATE (s)-[:SELECTED]->(o)',
+              { id: student.id, name: name },
+              { database: 'neo4j' }
+        )
+        
+          
+    }
+
+  }catch (err) {
+    console.error('Cant add to Graph',err);
+  } finally {
+    console.log('DONE ADDING TO GRAPH')
+  }
+  
+}

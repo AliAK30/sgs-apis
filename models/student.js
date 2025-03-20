@@ -3,7 +3,7 @@ const passportLocalMongoose = require("passport-local-mongoose");
 const {roles} = require("../config/roles.json")
 
 const Student = new mongoose.Schema({
-  student_id: { type: String, required: false, unique: true },
+  student_id: { type: String, required: false },
   first_name: { type: String, required: true, minLength: 2 },
   last_name: { type: String, required: true, minLength: 2 },
   uni_name: { type: String, required: true },
@@ -25,7 +25,28 @@ const Student = new mongoose.Schema({
     dim3: { name: String, score: Number },
     dim4: { name: String, score: Number },
   },
+  picture: { type: String },
+  newUser: { type: Boolean, default: true },
+  isSurveyCompleted: { type: Boolean, default: false},
+  privacy: {
+    picture: Number,
+    email: Number,
+    phone_number: Number,
+    gpa: Number,
+    learning_style: Number,
+  },
 });
+
+//0 means only me, 1 means friends only, 2 means everyone for privacy
+
+// Create a partial index
+Student.index(
+  { student_id: 1 }, // Index on the `student_id` field 1 means ascending
+  {
+    unique: true, // Enforce uniqueness
+    partialFilterExpression: { student_id: { $exists: true} }, // Only index documents where `student_id` exists and is not null
+  }
+);
 
 // Middleware to remove time from the Date field
 Student.pre("save", (next) => {

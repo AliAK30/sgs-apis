@@ -8,10 +8,10 @@ router.post("/login", controller.login)
 
 //this will change
 //verifyEmail,
-router.post("/register", checkDuplicateEmail,   controller.register)
+router.post("/register", checkDuplicateEmail, controller.register)
 //router.use(verifyJwt);
 
 router.patch("/update/questions", verifyJwt, controller.updateQuestions)
-router.patch("/identify/learningstyle", verifyJwt, controller.calculateLearningStyle)
+router.get("/identify/learningstyle", verifyJwt, controller.calculateLearningStyle)
 
 module.exports = router
