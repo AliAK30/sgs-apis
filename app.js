@@ -7,6 +7,8 @@ var bodyParser = require("body-parser")
 
 const neo4j = require('neo4j-driver')
 
+// Trust the Nginx proxy
+app.set('trust proxy', true);
 
 //NEO4J CONNECTION
 
