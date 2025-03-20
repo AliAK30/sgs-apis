@@ -33,12 +33,12 @@ var app = express();
 
 //MIDDLEWARES
 app.use(express.static(path.join(__dirname, "public")));
-app.use(cors({
+app.use(cors());
+
+/* {
   origin: "https://edumatch.netlify.app",
   credentials: true,
-}));
-
-
+} */
 app.use(bodyParser.text({ type: 'text/csv', limit: '10mb' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
