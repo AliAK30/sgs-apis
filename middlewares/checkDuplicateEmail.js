@@ -4,7 +4,7 @@ const Admin = require("../models/admin")
 checkDuplicateEmail = async (req, res, next) => {
 
     let User;
-    //console.log(req.headers)
+    
 
     if(req.body.role === "student")
     {

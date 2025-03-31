@@ -6,10 +6,8 @@ const checkDuplicateEmail = require("../middlewares/checkDuplicateEmail")
 
 router.post("/login", controller.login)
 
-//this will change
-//verifyEmail,
-router.post("/register", checkDuplicateEmail, controller.register)
-//router.use(verifyJwt);
+router.post("/register", checkDuplicateEmail, verifyEmail, controller.register)
+
 
 router.patch("/update/questions", verifyJwt, controller.updateQuestions)
 router.get("/identify/learningstyle", verifyJwt, controller.calculateLearningStyle)

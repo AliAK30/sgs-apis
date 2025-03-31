@@ -1,24 +1,15 @@
 var express = require("express");
 var cors = require("cors");
 var path = require("path");
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 var mongoose = require("mongoose");
-var bodyParser = require("body-parser")
-
-//const neo4j = require('neo4j-driver')
-
-//NEO4J CONNECTION
-
-
-//const driver = neo4j.driver(process.env.NEO4J_URI, neo4j.auth.basic(process.env.NEO4J_USER, process.env.NEO4J_PASSWORD));
-//driver.getServerInfo().then(serverInfo=>console.log('Connected to Neo4J', serverInfo)).catch(err=>console.log(err));
-
+var bodyParser = require("body-parser");
 
 
 //MONGODB DATABASE CONNECTION
 
 var db = mongoose
-  .connect(process.env.CONN_STRING, {dbName: 'edumatch'})
+  .connect(process.env.CONN_STRING, { dbName: "edumatch" })
   .then(() => {
     console.log("Successfully connect to MongoDB.");
   })
@@ -29,31 +20,29 @@ var db = mongoose
 
 //Express APP
 var app = express();
+var corsObj = cors({ origin: "https://edumatch.netlify.app", credentials: true })
 
 //MIDDLEWARES
 app.use(express.static(path.join(__dirname, "public")));
-app.use(cors());
 
-/* {
-  origin: "https://edumatch.netlify.app",
-  credentials: true,
-} */
-app.use(bodyParser.text({ type: 'text/csv', limit: '10mb' }));
+
+app.use(bodyParser.text({ type: "text/csv", limit: "10mb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 //ROUTES
-app.get("/", (req, res) => {
-  res.status(200).send({message:"hello"})
-})
-superuserRouter = require("./routes/superuser.route")
+app.get("/", corsObj, (req, res) => {
+  res.status(200).send({ message: "hello" });
+});
+
+superuserRouter = require("./routes/superuser.route");
 app.use("/superuser", superuserRouter);
 
-adminRouter = require("./routes/admin.route")
-app.use("/admin", adminRouter) //used cors on admin routes
+adminRouter = require("./routes/admin.route");
+app.use("/admin", corsObj, adminRouter); //used cors on admin routes
 
-studentRouter = require("./routes/student.route")
-app.use("/student", studentRouter) //used cors on student routes
+studentRouter = require("./routes/student.route");
+app.use("/student", corsObj, studentRouter); //used cors on student routes
 
 //DEVELOPMENT SERVER
 
@@ -63,6 +52,14 @@ app.listen(port);
 console.log("Server listening on port " + port);
 console.log(`Visit http://localhost:${port}/`);
 
+
+
+//NEO4J CONNECTION
+
+//const neo4j = require('neo4j-driver')
+
+//const driver = neo4j.driver(process.env.NEO4J_URI, neo4j.auth.basic(process.env.NEO4J_USER, process.env.NEO4J_PASSWORD));
+//driver.getServerInfo().then(serverInfo=>console.log('Connected to Neo4J', serverInfo)).catch(err=>console.log(err));
 
 
 /* const myFunc = async () => {
@@ -88,8 +85,3 @@ console.log(`Visit http://localhost:${port}/`);
 
 };
 myFunc(); */
-
-
-
-
-
