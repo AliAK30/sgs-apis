@@ -6,7 +6,9 @@ const checkDuplicateEmail = require("../middlewares/checkDuplicateEmail")
 
 router.post("/login", controller.login)
 
-router.post("/register", checkDuplicateEmail, verifyEmail, controller.register)
+
+router.post("/preregister", checkDuplicateEmail, verifyEmail);
+router.post("/register", controller.register)
 
 
 router.patch("/update/questions", verifyJwt, controller.updateQuestions)

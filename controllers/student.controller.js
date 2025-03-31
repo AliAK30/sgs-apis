@@ -1,16 +1,13 @@
 const Student = require("../models/student");
-const passwordGenerator = require("password-generator");
 const jwt = require("jsonwebtoken");
 const driver = require("../neo4j");
 
 exports.register = async (req, res) => {
-  req.body.uni_name = "Muhammad Ali Jinnah University";
-  req.body.uni_id = "677534463f4abf3b23f8b6d1";
-  //req.body.student_id = req.body.email.split("@")[0].toUpperCase();
 
-  const password = passwordGenerator(8, false);
+  let newBody = req.body
+  delete newBody.password
 
-  Student.register(req.body, password, (err) => {
+  Student.register(newBody, req.body.password, (err) => {
     if (err) {
       switch (err.name) {
         case "ValidationError":
@@ -28,12 +25,10 @@ exports.register = async (req, res) => {
 
       return;
     }
-    req.body.password = password;
-    this.login(req, res);
-    //res.status(200).json({ message: "Student registered successfully", student: student });
+    
+    res.status(200).json({ message: "Student registered successfully", student: student });
   });
-  //student.password = password;
-  //res.status(200).json({ message: "Student registered successfully", student: student });
+
 };
 
 exports.login = async (req, res) => {
@@ -57,10 +52,8 @@ exports.login = async (req, res) => {
 
     delete temp_user.hash;
     delete temp_user.salt;
-    temp_user.password = password;
-    res
-      .status(200)
-      .send({ message: "Login Successful", user: temp_user, token: token });
+    //temp_user.password = password;
+    res.status(200).send({ message: "Login Successful", user: temp_user, token: token });
   });
 };
 
@@ -170,7 +163,7 @@ exports.calculateLearningStyle = async (req, res) => {
     if (result.modifiedCount >= 0) {
       console.log("Learning style updated successfully.");
       student.learning_style = learning_style;
-      addToGraph(student);
+      //addToGraph(student);
       res
         .status(200)
         .json({

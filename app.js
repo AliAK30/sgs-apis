@@ -20,7 +20,8 @@ var db = mongoose
 
 //Express APP
 var app = express();
-var corsObj = cors({ origin: "https://edumatch.netlify.app", credentials: true })
+//{ origin: "https://edumatch.netlify.app", credentials: true }
+var corsObj = cors()
 
 //MIDDLEWARES
 app.use(express.static(path.join(__dirname, "public")));
