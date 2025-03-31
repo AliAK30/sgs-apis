@@ -35,6 +35,7 @@ const Student = new mongoose.Schema({
     gpa: Number,
     learning_style: Number,
   },
+  push_notifications: {type: Boolean, default: true},
 });
 
 //0 means only me, 1 means friends only, 2 means everyone for privacy
