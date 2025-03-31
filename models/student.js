@@ -29,12 +29,13 @@ const Student = new mongoose.Schema({
   newUser: { type: Boolean, default: true },
   isSurveyCompleted: { type: Boolean, default: false},
   privacy: {
-    picture: Number,
-    email: Number,
-    phone_number: Number,
-    gpa: Number,
-    learning_style: Number,
+    picture: {type: Number, default: 0},
+    email: {type: Number, default: 0},
+    phone_number: {type: Number, default: 0},
+    gpa: {type: Number, default: 0},
+    learning_style: {type: Number, default: 2},
   },
+  push_notifications: {type: Boolean, default: true},
 });
 
 //0 means only me, 1 means friends only, 2 means everyone for privacy
@@ -56,6 +57,7 @@ Student.pre("save", (next) => {
   }
   next();
 });
+
 Student.plugin(passportLocalMongoose, { usernameField: "email" });
 
 module.exports = mongoose.model("Student", Student);
