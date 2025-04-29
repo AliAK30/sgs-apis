@@ -1,6 +1,9 @@
 const Student = require("../models/student");
 const jwt = require("jsonwebtoken");
 const driver = require("../neo4j");
+const OTP = require('../models/otp');
+const { sendOTPEmail } = require('../utils/mailer');
+const crypto = require('crypto');
 
 exports.register = async (req, res) => {
 
@@ -32,30 +35,121 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  //console.log("Im here")
-  const { email, password } = req.body;
+  
+  
+  try {
+    const { email, password } = req.body;
 
-  Student.authenticate()(email, password, (err, user) => {
-    if (err || !user) {
-      //console.log(err)
-      return res.status(401).json({ error: "Invalid credentials" });
+
+    const authenticate = Student.authenticate()
+    
+    const response = await authenticate(email, password)
+    const user = response.user;
+    
+    if(!user)
+    {
+      res.status(401).json({message: "Email or password is incorrent, Please try again!", code: "UNAUTHORIZED",});
+      return;
     }
-
-    // Create a new JSON web token
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      algorithm: "HS256",
-      allowInsecureKeySizes: true,
-      expiresIn: "9999d",
-    });
-
-    const temp_user = user.toObject();
-
-    delete temp_user.hash;
-    delete temp_user.salt;
-    //temp_user.password = password;
-    res.status(200).send({ message: "Login Successful", user: temp_user, token: token });
-  });
+    
+  
+      // Create a new JSON web token
+      const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+        algorithm: "HS256",
+        allowInsecureKeySizes: true,
+        expiresIn: "9999d",
+      });
+  
+      const temp_user = user.toObject();
+  
+      delete temp_user.hash;
+      delete temp_user.salt;
+      //temp_user.password = password;
+      res.status(200).send({ message: "Login Successful", user: temp_user, token: token });
+    
+  } catch (err) {
+    console.log(err)
+    return res.status(500).send({message: err.message, code: 'UNKNOWN_ERROR'})
+  }
+  
 };
+
+exports.verifyOTP = async (req, res) => {
+
+  try {
+      const { email, otp } = req.body;
+      // Find the most recent OTP for the email
+      const otpRecord = await OTP.findOne({email:email});
+      
+
+      if (otpRecord.otp !== otp) {
+        return res.status(400).json({ message: 'Invalid OTP!', code: 'OTP_INVALID' });
+      }
+
+      if(otpRecord.expiresAt < Date.now()) {
+        return res.status(400).json({ message: 'OTP has expired, please generate another OTP', code: 'OTP_EXPIRED' });
+      }
+      
+      return res.status(200).json({message: 'OTP verified!', code: 'OTP_VERIFIED'});
+  }
+  catch (err) {
+    console.log(err)
+    return res.status(500).send({message: err.message, code: 'UNKNOWN_ERROR'})
+  }
+
+}
+
+exports.resetPassword = async (req, res) => {
+  try {
+    
+    const result = await this.verifyOTP(req, res);
+    
+    if(result.statusCode === 400) return;
+
+    const {new_password, email} = req.body;
+
+    const student = await Student.findByUsername(email);
+    await student.setPassword(new_password);
+    await student.save();
+    return res.status(200).send({message: "Password Reset Successfull!"});
+    
+  } catch (err) {
+    console.log(err)
+    return res.status(500).json({ message: err.message, code: 'UNKNOWN_ERROR' });
+  }
+ 
+}
+
+
+exports.generateOTP = async (req, res) => {
+
+  try {
+    // Generate OTP
+    const { email } = req.body;
+    //crypto.random
+    //generate six digit otp
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 1 minutes from now
+    await OTP.findOneAndUpdate(
+      { email },
+      { otp: otp, expiresAt: expiresAt },
+      { new: true, upsert: true } //upsert creates the document if it does not exist
+    );
+    // Send OTP to email
+    const emailSent = await sendOTPEmail(email, otp);
+    
+    if (emailSent) {
+      return res.status(200).json({ message: 'OTP sent to your email'});
+    } else {
+      return res.status(500).json({ message: 'Failed to send OTP, Please try again later', code: 'OTP_SEND_FAILED' });
+    }
+    
+
+  }catch (err) {
+    console.log(err);
+    return res.status(500).json({ message: err.message, code: 'UNKNOWN_ERROR' });
+  }
+}
 
 /* $push: {
   questions: {
