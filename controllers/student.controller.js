@@ -167,14 +167,14 @@ exports.updateQuestions = async (req, res) => {
       }
     );
 
-    if (result.modifiedCount > 0) {
+    if (result.modifiedCount >= 0) {
       console.log("Questions updated successfully.");
       res.status(200).send({ message: "Questions updated successfully." });
       return;
-    } else {
+    } /* else {
       console.log("No user found to update questions.");
       res.status(404).send({ message: "No user found to update questions." });
-    }
+    } */
   } catch (error) {
     console.error("Error updating questions:", error);
     res.status(500).send({ message: error });
