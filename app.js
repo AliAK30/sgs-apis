@@ -24,14 +24,15 @@ var db = mongoose
 var app = express();
 
 const corsOptions = { origin: "https://edumatch.netlify.app", credentials: true };
-//app.options('*', corsObj);
+app.use(cors(corsOptions));
+//app.options('*', cors(corsOptions));
 //MIDDLEWARES
 app.use(express.static(path.join(__dirname, "public")));
 app.use(bodyParser.text({ type: "text/csv", limit: "10mb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(globalLimiter); //rate limit
-app.use(cors(corsOptions));
+
 
 //ROUTES
 /* app.get("/", corsObj, (req, res) => {
