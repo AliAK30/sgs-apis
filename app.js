@@ -4,6 +4,8 @@ var path = require("path");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 var mongoose = require("mongoose");
 var bodyParser = require("body-parser");
+const University = require("./models/university");
+const limiter = require("./middlewares/rateLimiter")
 
 
 //MONGODB DATABASE CONNECTION
@@ -20,21 +22,31 @@ var db = mongoose
 
 //Express APP
 var app = express();
-//{ origin: "https://edumatch.netlify.app", credentials: true }
-var corsObj = cors()
+
+var corsObj = cors({ origin: "https://edumatch.netlify.app", credentials: true })
 
 //MIDDLEWARES
 app.use(express.static(path.join(__dirname, "public")));
-
-
 app.use(bodyParser.text({ type: "text/csv", limit: "10mb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(limiter); //rate limit
 
 //ROUTES
-app.get("/", corsObj, (req, res) => {
+/* app.get("/", corsObj, (req, res) => {
   res.status(200).send({ message: "hello" });
-});
+}); */
+
+app.get("/universities", corsObj, async (req, res) => {
+  try {
+    const response = await University.find({}).select('-__v');
+    
+    return res.status(200).json(response);
+  } catch (err) {
+    console.log(err)
+    return res.status(500).send({message: err.message, code: 'UNKNOWN_ERROR'})
+  }
+})
 
 superuserRouter = require("./routes/superuser.route");
 app.use("/superuser", superuserRouter);

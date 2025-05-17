@@ -7,31 +7,25 @@ const crypto = require('crypto');
 
 exports.register = async (req, res) => {
 
-  let newBody = req.body
-  delete newBody.password
+ try {
+  const password =  req.body.password;
+  delete req.body.password;
+  await Student.register(req.body, password);
+  return res.status(200).json({ message: "Student registered successfully" });
 
-  Student.register(newBody, req.body.password, (err) => {
-    if (err) {
-      switch (err.name) {
-        case "ValidationError":
-          res
-            .status(400)
-            .send({
-              message: "Please make sure all fields are valid",
-              code: "VALIDATION_ERROR",
-            });
-
-        default:
-          console.error(err);
-          res.status(500).send({ message: err.message });
-      }
-
-      return;
-    }
+ } catch (err) {
+  switch(err.name) {
+    case 'UserExistsError':
+      console.error(err);
+      return res.status(400).send({ message: err.message });
+      
     
-    res.status(200).json({ message: "Student registered successfully", student: student });
-  });
-
+    default:
+      console.error(console.log(err));
+      return res.status(500).send({ message: err.message });
+  }
+ }
+  
 };
 
 exports.login = async (req, res) => {
@@ -90,7 +84,9 @@ exports.verifyOTP = async (req, res) => {
         return res.status(400).json({ message: 'OTP has expired, please generate another OTP', code: 'OTP_EXPIRED' });
       }
       
-      return res.status(200).json({message: 'OTP verified!', code: 'OTP_VERIFIED'});
+      if(!req.body.onlyVerify) return res.status(200).json({message: 'OTP verified!', code: 'OTP_VERIFIED'});
+      else return {statusCode: 200};
+      
   }
   catch (err) {
     console.log(err)
@@ -101,7 +97,7 @@ exports.verifyOTP = async (req, res) => {
 
 exports.resetPassword = async (req, res) => {
   try {
-    
+    req.body.onlyVerify = true;
     const result = await this.verifyOTP(req, res);
     
     if(result.statusCode === 400) return;
@@ -112,6 +108,7 @@ exports.resetPassword = async (req, res) => {
     await student.setPassword(new_password);
     await student.save();
     return res.status(200).send({message: "Password Reset Successfull!"});
+    
     
   } catch (err) {
     console.log(err)
@@ -165,8 +162,8 @@ exports.updateQuestions = async (req, res) => {
     const result = await Student.updateOne(
       { _id: req.userId },
       {
-        questions: req.body, // Push multiple objects into the array
-        isSurveyCompleted: true,
+        questions: req.body.answers, // Push multiple objects into the array
+        isSurveyCompleted: req.body.isSurveyCompleted,
       }
     );
 
@@ -257,7 +254,7 @@ exports.calculateLearningStyle = async (req, res) => {
     if (result.modifiedCount >= 0) {
       console.log("Learning style updated successfully.");
       student.learning_style = learning_style;
-      //addToGraph(student);
+      addToGraph(student);
       res
         .status(200)
         .json({

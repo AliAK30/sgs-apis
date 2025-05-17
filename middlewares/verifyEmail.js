@@ -1,6 +1,8 @@
 
 
 verifyEmail = async (req, res) => {
+  //res.status(200).send({isEmailValid: true, message: "Email address exists", code: 'VALID_EMAIL'});
+        //return;
     const url = `https://api.quickemailverification.com/v1/verify?email=${req.body.email}&apikey=${process.env.API_KEY}`
     try {
       const response = await fetch(url)
