@@ -48,8 +48,8 @@ app.get("/universities", corsObj, async (req, res) => {
   }
 })
 
-superuserRouter = require("./routes/superuser.route");
-app.use("/superuser", superuserRouter);
+/* superuserRouter = require("./routes/superuser.route");
+app.use("/superuser", superuserRouter); */
 
 adminRouter = require("./routes/admin.route");
 app.use("/admin", corsObj, adminRouter); //used cors on admin routes
