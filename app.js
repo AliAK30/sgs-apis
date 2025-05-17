@@ -23,21 +23,22 @@ var db = mongoose
 //Express APP
 var app = express();
 
-var corsObj = cors({ origin: "https://edumatch.netlify.app", credentials: true })
-
+const corsOptions = { origin: "https://edumatch.netlify.app", credentials: true };
+//app.options('*', corsObj);
 //MIDDLEWARES
 app.use(express.static(path.join(__dirname, "public")));
 app.use(bodyParser.text({ type: "text/csv", limit: "10mb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(globalLimiter); //rate limit
+app.use(cors(corsOptions));
 
 //ROUTES
 /* app.get("/", corsObj, (req, res) => {
   res.status(200).send({ message: "hello" });
 }); */
 
-app.get("/universities", corsObj, async (req, res) => {
+app.get("/universities", async (req, res) => {
   try {
     const response = await University.find({}).select('-__v'); //dont send version
     
@@ -52,10 +53,10 @@ app.get("/universities", corsObj, async (req, res) => {
 app.use("/superuser", superuserRouter); */
 
 adminRouter = require("./routes/admin.route");
-app.use("/admin", corsObj, adminRouter); //used cors on admin routes
+app.use("/admin", adminRouter); //used cors on admin routes
 
 studentRouter = require("./routes/student.route");
-app.use("/student", corsObj, studentRouter); //used cors on student routes
+app.use("/student", studentRouter); //used cors on student routes
 
 //DEVELOPMENT SERVER
 
