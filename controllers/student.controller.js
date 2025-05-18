@@ -159,6 +159,8 @@ exports.updateQuestions = async (req, res) => {
   //console.log(req.body);
 
   try {
+    const student = await Student.findById(req.userId);
+    if(student.isSurveyCompleted) return res.status(400).json({ message: `Dear ${student.first_name}, you have already submitted the answers.`, code: 'RESUBMISSION' })
     const result = await Student.updateOne(
       { _id: req.userId },
       {
