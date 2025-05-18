@@ -24,7 +24,7 @@ var db = mongoose
 var app = express();
 app.set('trust proxy', 1 /* number of proxies between user and server */)
 //app.get('/ip', (request, response) => response.send(request.ip))
-const corsOptions = { origin: "https://edumatch.netlify.app/", credentials: true };
+const corsOptions = { origin: "https://edumatch.netlify.app", credentials: true };
 app.use(cors(corsOptions));
 //app.options('*', cors(corsOptions));
 //MIDDLEWARES
