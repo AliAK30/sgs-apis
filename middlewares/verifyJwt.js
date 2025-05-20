@@ -1,7 +1,15 @@
 const jwt = require("jsonwebtoken");
 
 verifyToken = (req, res, next) => {
-  let token = req.headers.authorization.split(" ")[1]
+  let token;
+  try {
+    token = req.headers.authorization.split(" ")[1]
+  } catch (err) {
+    console.log(err)
+    return res.status(400).json({ message: 'Please set authentication headers', code: 'BAD_REQUEST' });
+  }
+
+  try {
   
   if (!token) {
     return res.status(403).send({ message: "No token provided!" });
@@ -17,6 +25,12 @@ verifyToken = (req, res, next) => {
     req.userId = decoded.id;
     next();
   });
+} catch (err) {
+  console.log(err)
+  return res.status(500).json({ message: err.message, code: 'UNKNOWN_ERROR' });
+}
+  
+  
 };
 
 
