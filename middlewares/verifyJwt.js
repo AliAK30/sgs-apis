@@ -5,6 +5,11 @@ verifyToken = (req, res, next) => {
   try {
     token = req.headers.authorization.split(" ")[1]
   } catch (err) {
+    console.log(`IP: ${req.ip}`);
+    console.log(`Origin: ${req.get('origin')}`)
+    console.log(`Referer: ${req.get('referer')}`)
+    console.log(`User Agent: ${req.get('user-agent')}`);
+    console.log(err)
     console.log(err)
     return res.status(400).json({ message: 'Please set authentication headers', code: 'BAD_REQUEST' });
   }
@@ -12,6 +17,11 @@ verifyToken = (req, res, next) => {
   try {
   
   if (!token) {
+    console.log(`IP: ${req.ip}`);
+    console.log(`Origin: ${req.get('origin')}`)
+    console.log(`Referer: ${req.get('referer')}`)
+    console.log(`User Agent: ${req.get('user-agent')}`);
+    console.log(err)
     return res.status(403).send({ message: "No token provided!" });
   }
 
