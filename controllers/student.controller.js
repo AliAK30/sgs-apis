@@ -8,6 +8,9 @@ const crypto = require('crypto');
 exports.register = async (req, res) => {
 
  try {
+  if (req.body.email) {
+      req.body.email = req.body.email.toLowerCase();
+    }
   const password =  req.body.password;
   delete req.body.password;
   await Student.register(req.body, password);
