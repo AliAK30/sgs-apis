@@ -24,8 +24,8 @@ var db = mongoose
 var app = express();
 //app.set('trust proxy', 1 /* number of proxies between user and server */)
 //app.get('/ip', (request, response) => response.send(request.ip))
-const corsOptions = { origin: "http://localhost:8081", credentials: true };
-app.use(cors(corsOptions));
+//const corsOptions = { origin: "http://localhost:8081", credentials: true };
+app.use(cors());
 //app.options('*', cors(corsOptions));
 //MIDDLEWARES
 app.use(express.static(path.join(__dirname, "public")));
