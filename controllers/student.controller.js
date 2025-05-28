@@ -6,6 +6,7 @@ const { sendOTPEmail } = require('../utils/mailer');
 const crypto = require('crypto');
 const containerClient = require("../azure");
 const sharp = require('sharp');
+const {ObjectId} = require('mongoose').Types
 
 const formatName = (name) => {
   return name
@@ -26,6 +27,20 @@ async function compressImage(buffer) {
       fit: 'inside',
       withoutEnlargement: true
     }).toBuffer();
+}
+
+function getAgeInYears(dob) {
+  const birthDate = dob;
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  // Adjust if birthday hasn't occurred yet this year
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age;
 }
 
 
@@ -121,6 +136,8 @@ exports.getStudent = async (req, res) => {
 
     if (privacy.picture !== 2 && student.picture ) delete student.picture;
     if (privacy.email !== 2) delete student.email;
+    if (privacy.dob !== 2) delete student.dob;
+    else student.age = getAgeInYears(student.dob);
     if (privacy.phone_number !== 2 && student.phone_number) delete student.phone_number;
     if (privacy.gpa !== 2 && student.gpa) delete student.gpa;
     if (privacy.learning_style !== 2) delete student.learning_style;
@@ -151,7 +168,8 @@ try {
     },
     {
       $match: {
-        full_name: { $regex: searchString, $options: "i" }
+        full_name: { $regex: searchString, $options: "i" },
+        _id: { $ne: new ObjectId(req.userId) } //exclude self
       }
     },
     {
@@ -416,6 +434,25 @@ exports.uploadPicture = async (req, res) => {
   }
 }
 
+exports.getSimilarity = async (req, res) => {
+  try{
+    let {records} = await driver.executeQuery(
+      "MATCH (s1: Student {id: $id1})-[:SELECTED]->(opt:Option)<-[:SELECTED]-(s2:Student {id: $id2}) \
+      WITH s1, s2, count(opt) as options \
+      RETURN toFloat(options)/(88-options)*100 as similarity",
+      { id1: req.userId, id2: req.params.id},
+      { database: "neo4j" }
+    );
+    if(records.length===0) return res.status(404).json({message: 'Either of you have not calculated their learning style.'});
+    
+    const similarity = Math.round(records[0].toObject().similarity);
+    //console.log(similarity);
+    return res.status(200).json({data1: similarity, data2: 100-similarity});
+  }catch {
+    console.error('Cant add to Graph',err);
+    return res.status(500).send({message: 'Error checking similarity'});
+  }
+}
 
 const addToGraph = async (student) => {
   
@@ -435,14 +472,13 @@ const addToGraph = async (student) => {
               { id: student.id, name: name },
               { database: 'neo4j' }
         )
-        
+        console.log('DONE ADDING TO GRAPH')
           
     }
 
   }catch (err) {
     console.error('Cant add to Graph',err);
-  } finally {
-    console.log('DONE ADDING TO GRAPH')
-  }
+  } 
+  
   
 }
