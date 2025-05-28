@@ -4,10 +4,46 @@ const driver = require("../neo4j");
 const OTP = require('../models/otp');
 const { sendOTPEmail } = require('../utils/mailer');
 const crypto = require('crypto');
+const containerClient = require("../azure");
+const sharp = require('sharp');
+
+const formatName = (name) => {
+  return name
+    .trim()
+    .split(/\s+/) // split by one or more spaces
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+async function compressImage(buffer) {
+  const options = {
+    width: 256,       // Max width in pixels
+    height: 256,      // Max height in pixels
+  };
+
+  return sharp(buffer)
+    .resize(options.width, options.height, {
+      fit: 'inside',
+      withoutEnlargement: true
+    }).toBuffer();
+}
+
 
 exports.register = async (req, res) => {
 
  try {
+
+  if (req.body.email) {
+      req.body.email = req.body.email.toLowerCase();
+    }
+
+  if (req.body.first_name) {
+      req.body.first_name = formatName(req.body.first_name);
+    }
+    if (req.body.last_name) {
+      req.body.last_name = formatName(req.body.last_name);
+    }
+
   const password =  req.body.password;
   delete req.body.password;
   await Student.register(req.body, password);
@@ -67,6 +103,83 @@ exports.login = async (req, res) => {
   }
   
 };
+
+exports.getStudent = async (req, res) => {
+  try {
+    const {id} = req.params
+    // Fetch the student (excluding `questions`)
+    const student = await Student.findById(studentId)
+      .select('-questions', '_v') // Exclude the questions field
+      .lean(); // Get plain JS object instead of Mongoose document
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    // Conditionally remove private fields based on `privacy` settings
+    const privacy = student.privacy ?? {};
+
+    if (privacy.picture !== 2 && student.picture ) delete student.picture;
+    if (privacy.email !== 2) delete student.email;
+    if (privacy.phone_number !== 2 && student.phone_number) delete student.phone_number;
+    if (privacy.gpa !== 2 && student.gpa) delete student.gpa;
+    if (privacy.learning_style !== 2) delete student.learning_style;
+
+    return res.status(200).json(student)
+    
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Error getting details' });
+  }
+  
+}
+
+exports.searchStudents = async (req, res) => {
+try {
+    const searchString = req.query.name;
+    
+    if (!searchString || searchString.trim().length < 2) {
+      return res.status(400).json({ code: 'INSUFFICIENT_CHARACTERS', message: 'Please provide a search term with at least 2 characters' });
+    }
+
+    const students = await Student.aggregate([
+    {
+      $addFields: {
+        full_name: { $concat: ["$first_name", " ", "$last_name"] }
+      }
+    },
+    {
+      $match: {
+        full_name: { $regex: searchString, $options: "i" }
+      }
+    },
+    {
+    $project: {
+      _id: 1,
+      full_name: 1,
+      uni_name: 1,
+      picture: {
+        $cond: {
+          if: { $eq: ["$privacy.picture", 2] },
+          then: "$picture",
+          else: null // Removes the field if condition not met
+        }
+      }
+    }
+  },
+  {
+    $limit: 10
+  }
+  ]);
+
+    return res.status(200).json(students);
+  } catch (error) {
+    console.error('Search error:', error);
+    return res.status(500).json({ message: 'Error searching for students' });
+  }
+}
+
 
 exports.verifyOTP = async (req, res) => {
 
@@ -271,6 +384,37 @@ exports.calculateLearningStyle = async (req, res) => {
     return;
   }
 };
+
+exports.uploadPicture = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).send('No file uploaded');
+    
+    const format = req.file.mimetype.split('/')[1];
+    console.log(format);
+    const buffer = await compressImage(req.file.buffer);
+    //console.log(buffer);
+    
+    // Create unique filename
+    const filename = `students/${req.userId}/${Date.now()}-${req.file.originalname}`;
+    
+    // Upload to Azure
+    const blockBlobClient = containerClient.getBlockBlobClient(filename);
+    
+    const response = await blockBlobClient.uploadData(buffer, {
+      onProgress: (ev) => console.log(`Uploaded ${ev.loadedBytes} bytes`),
+      blobHTTPHeaders: { blobContentType: req.file.mimetype }
+    });
+    
+    
+    const url = process.env.SAS_URL+filename+process.env.SAS_TOKEN
+    //console.log(url);
+    const student = await Student.findByIdAndUpdate(req.userId,{picture: url})
+    res.status(200).json({ user: student });
+  } catch (error) {
+    console.error('Upload failed:', error);
+    res.status(500).send({message: 'Upload failed'});
+  }
+}
 
 
 const addToGraph = async (student) => {

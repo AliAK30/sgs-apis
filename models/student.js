@@ -29,11 +29,11 @@ const Student = new mongoose.Schema({
   newUser: { type: Boolean, default: true },
   isSurveyCompleted: { type: Boolean, default: false},
   privacy: {
-    picture: {type: Number, default: 0},
-    email: {type: Number, default: 0},
-    phone_number: {type: Number, default: 0},
-    gpa: {type: Number, default: 0},
-    learning_style: {type: Number, default: 2},
+    picture: {type: Number, default: 1},
+    email: {type: Number, default: 1},
+    phone_number: {type: Number, default: 1},
+    gpa: {type: Number, default: 1},
+    learning_style: {type: Number, default: 1},
   },
   push_notifications: {type: Boolean, default: true},
 });
@@ -48,6 +48,8 @@ Student.index(
     partialFilterExpression: { student_id: { $exists: true} }, // Only index documents where `student_id` exists and is not null
   }
 );
+
+
 
 // Middleware to remove time from the Date field
 Student.pre("save", (next) => {
