@@ -108,8 +108,8 @@ exports.getStudent = async (req, res) => {
   try {
     const {id} = req.params
     // Fetch the student (excluding `questions`)
-    const student = await Student.findById(studentId)
-      .select('-questions', '_v') // Exclude the questions field
+    const student = await Student.findById(id)
+      .select('-questions -__v') // Exclude the questions field
       .lean(); // Get plain JS object instead of Mongoose document
 
     if (!student) {
