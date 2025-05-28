@@ -34,6 +34,7 @@ const Student = new mongoose.Schema({
     phone_number: {type: Number, default: 1},
     gpa: {type: Number, default: 1},
     learning_style: {type: Number, default: 1},
+    dob: {type: Number, default: 1},
   },
   push_notifications: {type: Boolean, default: true},
 });
