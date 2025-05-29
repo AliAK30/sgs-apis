@@ -19,6 +19,14 @@ exports.register = async (req, res) => {
   if (req.body.email) {
       req.body.email = req.body.email.toLowerCase();
     }
+
+
+    if (req.body.first_name) {
+      req.body.first_name = formatName(req.body.first_name);
+    }
+    if (req.body.last_name) {
+      req.body.last_name = formatName(req.body.last_name);
+    }
   const password =  req.body.password;
   delete req.body.password;
   await Student.register(req.body, password);
