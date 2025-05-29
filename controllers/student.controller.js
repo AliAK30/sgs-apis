@@ -5,6 +5,14 @@ const OTP = require('../models/otp');
 const { sendOTPEmail } = require('../utils/mailer');
 const crypto = require('crypto');
 
+const formatName = (name) => {
+  return name
+    .trim()
+    .split(/\s+/) // split by one or more spaces
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 exports.register = async (req, res) => {
 
  try {
