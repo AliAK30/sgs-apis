@@ -3,18 +3,13 @@ const jwt = require("jsonwebtoken");
 const driver = require("../neo4j");
 const OTP = require('../models/otp');
 const { sendOTPEmail } = require('../utils/mailer');
+const {formatName, getAgeInYears} = require("../utils/helpers")
 const crypto = require('crypto');
 const containerClient = require("../azure");
 const sharp = require('sharp');
 const {ObjectId} = require('mongoose').Types
 
-const formatName = (name) => {
-  return name
-    .trim()
-    .split(/\s+/) // split by one or more spaces
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-};
+
 
 async function compressImage(buffer) {
   const options = {
@@ -29,19 +24,7 @@ async function compressImage(buffer) {
     }).toBuffer();
 }
 
-function getAgeInYears(dob) {
-  const birthDate = dob;
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  
-  // Adjust if birthday hasn't occurred yet this year
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  
-  return age;
-}
+
 
 
 exports.register = async (req, res) => {
@@ -154,44 +137,82 @@ exports.getStudent = async (req, res) => {
 
 exports.searchStudents = async (req, res) => {
 try {
+  
     const searchString = req.query.name;
+    let page = parseInt(req.query.page ?? "1");
+    if (isNaN(page) || page < 1) page = 1; //check for negative numbers
+    const limit = 6;
+    const skip = (page - 1) * limit;
     
-    if (!searchString || searchString.trim().length < 2) {
-      return res.status(400).json({ code: 'INSUFFICIENT_CHARACTERS', message: 'Please provide a search term with at least 2 characters' });
+    if (!searchString || searchString.trim().length < 1) {
+      return res.status(400).json({ code: 'INSUFFICIENT_CHARACTERS', message: 'Please provide a search term with at least 1 character' });
     }
 
-    const students = await Student.aggregate([
-    {
-      $addFields: {
-        full_name: { $concat: ["$first_name", " ", "$last_name"] }
-      }
-    },
-    {
+    const basePipeline = [
+      {
+        $addFields: {
+          full_name: { $concat: ["$first_name", " ", "$last_name"] },
+        },
+      },
+      {
       $match: {
         full_name: { $regex: searchString, $options: "i" },
         _id: { $ne: new ObjectId(req.userId) } //exclude self
       }
-    },
-    {
-    $project: {
-      _id: 1,
-      full_name: 1,
-      uni_name: 1,
-      picture: {
-        $cond: {
-          if: { $eq: ["$privacy.picture", 2] },
-          then: "$picture",
-          else: null // Removes the field if condition not met
-        }
-      }
-    }
-  },
-  {
-    $limit: 10
-  }
-  ]);
+      },
+    ];
 
-    return res.status(200).json(students);
+    // Step 1: Get total count
+    const totalCountResult = await Student.aggregate([
+      ...basePipeline,
+      { $count: "total" },
+    ]);
+    const totalCount = totalCountResult[0]?.total ?? 0;
+
+    // Step 2: Check if skip is beyond total
+    if (skip >= totalCount) {
+      
+      return res.status(200).json({
+      students: [],
+      hasMore: false,
+      totalCount: totalCount,
+      currentPage: page,
+    });
+
+    }
+
+    // Step 3: Get paginated results
+    const students = await Student.aggregate([
+      ...basePipeline,
+      {
+        $project: {
+          _id: 1,
+          full_name: 1,
+          uni_name: 1,
+          picture: {
+            $cond: {
+              if: { $eq: ["$privacy.picture", 2] },
+              then: "$picture",
+              else: null,
+            },
+          },
+        },
+      },
+      { $skip: skip },
+      { $limit: limit },
+    ]);
+
+
+
+    const hasMore = skip + students.length < totalCount;
+    //console.log(`length: ${students.length}, page ${page}, skip ${skip}`);
+    return res.status(200).json({
+      students,
+      hasMore,
+      totalCount,
+      currentPage: page,
+    });
+
   } catch (error) {
     console.error('Search error:', error);
     return res.status(500).json({ message: 'Error searching for students' });
