@@ -44,6 +44,7 @@ exports.register = async (req, res) => {
 
   const password =  req.body.password;
   delete req.body.password;
+  req.body.questions = new Array(44).fill({q: 0, answer: ''});
   await Student.register(req.body, password);
   return res.status(200).json({ message: "Student registered successfully" });
 
@@ -308,33 +309,70 @@ exports.generateOTP = async (req, res) => {
 }, */
 
 exports.updateQuestions = async (req, res) => {
-  //console.log(req.body);
-
   try {
     const student = await Student.findById(req.userId);
-    if(student.isSurveyCompleted) return res.status(400).json({ message: `Dear ${student.first_name}, you have already submitted the answers.`, code: 'RESUBMISSION' })
-    const result = await Student.updateOne(
-      { _id: req.userId },
-      {
-        questions: req.body.answers, // Push multiple objects into the array
-        isSurveyCompleted: req.body.isSurveyCompleted,
-      }
-    );
 
-    if (result.modifiedCount >= 0) {
-      console.log("Questions updated successfully.");
-      res.status(200).send({ message: "Questions updated successfully." });
-      return;
-    } /* else {
-      console.log("No user found to update questions.");
-      res.status(404).send({ message: "No user found to update questions." });
-    } */
+    if (student.isSurveyCompleted) {
+      return res.status(400).json({
+        message: `Dear ${student.first_name}, you have already submitted the answers.`,
+        code: 'RESUBMISSION',
+      });
+    }
+
+    const existingAnswers = Array.isArray(student.questions) ? student.questions : [];
+    const incomingAnswers = req.body.answers;
+
+    const bulkOps = [];
+
+    // 🔹 Handle single-answer case first
+    if (incomingAnswers.length === 1) {
+      const { q, answer } = incomingAnswers[0];
+      const existing = existingAnswers[q-1]
+      
+
+      if(answer !== existing.answer)
+      await Student.updateOne(
+        { _id: req.userId },
+        { $set: { [`questions.${q - 1}`]: { q, answer } } }
+      );
+
+      
+    } else {
+      // 🔹 Handle multiple-answer case
+      for (const { q, answer } of incomingAnswers) {
+        const existing = existingAnswers[q-1];
+
+        if (existing.answer !== answer) {
+          bulkOps.push({
+            updateOne: {
+                filter: { _id: req.userId },
+                update: { $set: { [`questions.${q - 1}`]: { q, answer } } }
+            }
+          });
+        }
+      }
+
+      if (bulkOps.length > 0) {
+        await Student.bulkWrite(bulkOps);
+      }
+    }
+
+    // Set survey completion if flagged
+    if (req.body.isSurveyCompleted === true) {
+      await Student.updateOne(
+        { _id: req.userId },
+        { $set: { isSurveyCompleted: true } }
+      );
+    }
+
+    return res.status(200).json({ message: "Questions updated successfully." });
+
   } catch (error) {
     console.error("Error updating questions:", error);
-    res.status(500).send({ message: error });
-    return;
+    return res.status(500).json({ message: error.message || error });
   }
 };
+
 
 exports.calculateLearningStyle = async (req, res) => {
   try {
@@ -408,14 +446,14 @@ exports.calculateLearningStyle = async (req, res) => {
     if (result.modifiedCount >= 0) {
       console.log("Learning style updated successfully.");
       student.learning_style = learning_style;
-      addToGraph(student);
-      res
-        .status(200)
-        .json({
-          student: student,
-          message: "Learning style updated successfully.",
-        });
-      return;
+      if(addToGraph(student))
+      {
+          return res.status(200).json({student: student,message: "Learning style updated successfully.",});
+      } else {
+        return res.status(500).send({ message: 'Our Server is down, please try again later, Sorry for the inconvenience!' });
+      }
+
+      
     }
   } catch (error) {
     console.error("Error identifing learning style:", error);
@@ -469,8 +507,8 @@ exports.getSimilarity = async (req, res) => {
     const similarity = Math.round(records[0].toObject().similarity);
     //console.log(similarity);
     return res.status(200).json({data1: similarity, data2: 100-similarity});
-  }catch {
-    console.error('Cant add to Graph',err);
+  }catch (err){
+    console.error('Cant check similarity',err);
     return res.status(500).send({message: 'Error checking similarity'});
   }
 }
@@ -494,11 +532,12 @@ const addToGraph = async (student) => {
               { database: 'neo4j' }
         )
         console.log('DONE ADDING TO GRAPH')
-          
+          return true;
     }
 
   }catch (err) {
     console.error('Cant add to Graph',err);
+    return false;
   } 
   
   
