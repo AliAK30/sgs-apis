@@ -72,7 +72,7 @@ exports.login = async (req, res) => {
 
     const authenticate = Student.authenticate()
     
-    const response = await authenticate(email, password)
+    const response = await authenticate(email.toLowerCase(), password)
     const user = response.user;
     
     if(!user)
