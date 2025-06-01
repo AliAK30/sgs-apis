@@ -22,6 +22,7 @@ router.get("/identify/learningstyle", verifyJwt, controller.calculateLearningSty
 router.get("/search", verifyJwt, controller.searchStudents);
 router.post("/upload/picture", verifyJwt, upload.single('image'), controller.uploadPicture);
 router.get("/similarity/:id",verifyJwt, controller.getSimilarity)
+router.get("/similarities/:id", verifyJwt, controller.getSimilarities)
 router.get("/:id", verifyJwt, controller.getStudent)
 
 module.exports = router

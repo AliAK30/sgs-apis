@@ -8,6 +8,8 @@ const crypto = require('crypto');
 const containerClient = require("../azure");
 const sharp = require('sharp');
 const {ObjectId} = require('mongoose').Types
+const neo4j = require('neo4j-driver');
+const { response } = require("express");
 
 
 
@@ -495,6 +497,7 @@ exports.uploadPicture = async (req, res) => {
 
 exports.getSimilarity = async (req, res) => {
   try{
+
     let {records} = await driver.executeQuery(
       "MATCH (s1: Student {id: $id1})-[:SELECTED]->(opt:Option)<-[:SELECTED]-(s2:Student {id: $id2}) \
       WITH s1, s2, count(opt) as options \
@@ -511,6 +514,67 @@ exports.getSimilarity = async (req, res) => {
     console.error('Cant check similarity',err);
     return res.status(500).send({message: 'Error checking similarity'});
   }
+}
+
+exports.getSimilarities = async (req, res) => {
+  try{
+    const student = await Student.findById(req.userId);
+    if(!student.isSurveyCompleted) return res.status(400).json({code: 'UNIDENTIFIED_LS',message: 'Please answer and submit all the questions on the analytics screen and then try again'});
+
+    let page = parseInt(req.query.page ?? "1");
+    if (isNaN(page) || page < 1) page = 1; //check for negative numbers
+    const skip = (page - 1) * 6;
+    
+    let {records} = await driver.executeQuery(
+      `MATCH (s1: Student {id: $id})-[:SELECTED]->(opt:Option)<-[:SELECTED]-(s2:Student) \
+      WITH s1, s2, count(opt) as options \
+      RETURN s2.id as id, s2.name as full_name, toFloat(options)/(88-options)*100 as similarity \
+      ORDER BY similarity DESC \
+      SKIP $skip \
+      LIMIT $limit`,
+      {
+        id: req.userId,
+        skip: neo4j.int(skip),
+        limit: neo4j.int(6),
+      },
+      { database: "neo4j" }
+    );
+    
+    const recordsObj = records.map(record=>record.toObject()).filter(record=>record.similarity>=40);
+
+    //console.log(page);
+    //console.log(recordsObj)
+    //console.log('\n')
+    if(recordsObj.length===0) return res.status(200).json({students: [], currentPage:page, hasMore: false});
+
+    const objectIds = recordsObj.map(record => new ObjectId(record.id));
+    
+
+    const students = await Student.find({ _id: { $in: objectIds } })
+    .select("_id uni_name")  // only fetch desired fields
+    .lean(); // convert Mongoose documents to plain JS objects
+
+    // Create a map from ID to student
+    const studentMap = new Map();
+    students.forEach(s => studentMap.set(s._id.toString(), s));
+
+    // Reorder to match objectIds array
+    const sortedStudents = objectIds.map(id => studentMap.get(id.toString()));
+    
+    
+    for(const i in recordsObj)
+    {
+      sortedStudents[i].similarity = Math.round(recordsObj[i].similarity);
+      sortedStudents[i].full_name = recordsObj[i].full_name;
+    }
+    
+    return res.status(200).json({students: sortedStudents, currentPage:page, hasMore: sortedStudents.length===6});
+
+  }catch (err){
+    console.error('Cant check similarity',err);
+    return res.status(500).send({message: 'Error checking similarity'});
+  }
+
 }
 
 const addToGraph = async (student) => {
