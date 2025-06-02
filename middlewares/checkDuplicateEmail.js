@@ -22,7 +22,7 @@ checkDuplicateEmail = async (req, res, next) => {
             next();
             return;
         }
-        res.status(400).send({isRegistered: true, message: "You are already registered!", code: 'DUPLICATE_EMAIL'})
+        res.status(400).send({isRegistered: true, message: "There is already an account registered with this email!", code: 'DUPLICATE_EMAIL'})
 
     } catch (e) {
         res.status(500).send({message: e.message})

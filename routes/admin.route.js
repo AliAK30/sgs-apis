@@ -1,11 +1,16 @@
 var router = require("express").Router();
 var controller = require("../controllers/admin.controller")
 const verifyJwt = require("../middlewares/verifyJwt")
+const verifyEmail = require("../middlewares/verifyEmail")
+const checkDuplicateEmail = require("../middlewares/checkDuplicateEmail")
 const {checkRoleSysAdmin, checkRoleAdmin} = require("../middlewares/checkRole")
 
 router.post("/login", controller.login);
 
-router.post("/register", verifyJwt, checkRoleSysAdmin, controller.registerAdmin);
+router.post("/register", verifyJwt, checkRoleSysAdmin, checkDuplicateEmail, verifyEmail, controller.registerAdmin);
+router.get("/students/count", verifyJwt, checkRoleAdmin, controller.getStudentsCount)
+router.get("/groups/count", verifyJwt, checkRoleAdmin, controller.getGroupsCount)
+router.get("/count", verifyJwt, checkRoleAdmin, controller.getAdminsCount)
 router.delete("/delete/admin/:id", verifyJwt, checkRoleSysAdmin, controller.deleteAdmin)
 router.delete("/delete/student/:studentid", verifyJwt, checkRoleAdmin, controller.deleteStudent)
 router.post("/register/students", verifyJwt, checkRoleAdmin, controller.registerStudents)

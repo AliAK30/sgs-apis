@@ -63,6 +63,8 @@ app.use("/admin", adminRouter); //used cors on admin routes
 studentRouter = require("./routes/student.route");
 app.use("/student", studentRouter); //used cors on student routes
 
+passwordRouter = require("./routes/password.route");
+app.use("/password", passwordRouter);
 //DEVELOPMENT SERVER
 
 //Get port from environment and store in Express.

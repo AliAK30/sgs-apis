@@ -1,51 +1,111 @@
 const Admin = require("../models/admin");
 const Student = require("../models/student");
+const Group = require("../models/group");
 const jwt = require("jsonwebtoken");
 const csvParser = require("../helpers/csvParser");
 const passwordGenerator = require("password-generator");
+const {formatName, getAgeInYears} = require("../utils/helpers")
+
 
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
-
-  Admin.authenticate()(email, password, (err, user) => {
-    if (err || !user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+    try {
+      const { email, password } = req.body;  
+      const authenticate = Admin.authenticate()
+      const response = await authenticate(email.toLowerCase(), password)
+      const user = response.user;
+      
+      if(!user)
+      {
+        res.status(401).json({message: "Email or password is incorrent, Please try again!", code: "UNAUTHORIZED",});
+        return;
+      }
+        // Create a new JSON web token
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+          algorithm: "HS256",
+          allowInsecureKeySizes: true,
+          expiresIn: "9999d",
+        });
+    
+        const temp_user = user.toObject();
+    
+        delete temp_user.hash;
+        delete temp_user.salt;
+        
+        res.status(200).send({ message: "Login Successful", user: temp_user, token: token });
+      
+    } catch (err) {
+      console.log(err)
+      return res.status(500).send({message: err.message, code: 'UNKNOWN_ERROR'})
     }
-
-    // Create a new JSON web token
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      algorithm: "HS256",
-      allowInsecureKeySizes: true,
-      expiresIn: "9999d",
-    });
-
-    const temp_user = user.toObject();
-    delete temp_user.hash;
-    delete temp_user.salt;
-    res
-      .status(200)
-      .json({ message: "Login Successful", user: temp_user, token: token });
-  });
+    
 };
 
 exports.registerAdmin = async (req, res) => {
-  const admin = new Admin({
-    email: req.body.email,
-    first_name: req.body.first_name,
-    last_name: req.body.last_name,
-    uni_name: req.body.uni_name,
-    uni_id: req.body.uni_id,
-    role: req.body.role,
-  });
+  try {
 
-  Admin.register(admin, req.body.password, (err) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: err.message });
+  if (req.body.email) {
+      req.body.email = req.body.email.toLowerCase();
     }
-    res.status(200).json({ message: "Admin registered successfully" });
-  });
+
+  if (req.body.first_name) {
+      req.body.first_name = formatName(req.body.first_name);
+    }
+    if (req.body.last_name) {
+      req.body.last_name = formatName(req.body.last_name);
+    }
+
+  const password =  req.body.password;
+  delete req.body.password;
+  
+  await Admin.register(req.body, password);
+  return res.status(200).json({ message: "Admin registered successfully" });
+
+ } catch (err) {
+  switch(err.name) {
+    case 'UserExistsError':
+      console.error(err);
+      return res.status(400).send({ message: err.message });
+      
+    
+    default:
+      console.error(console.log(err));
+      return res.status(500).send({ message: err.message });
+  }
+ }
 };
+
+exports.getStudentsCount = async (req, res) => {
+  try {
+    const totalStudents = await Student.countDocuments({ uni_id: req.user.uni_id });
+    
+    return res.status(200).json(totalStudents);
+  } catch (error) {
+    console.error('Error getting total number of students:', error);
+    return res.status(500).json({ message: 'Error getting total number of students' });
+  }
+}
+
+exports.getGroupsCount = async (req, res) => {
+  try {
+    const totalGroups = await Group.countDocuments({ uni_id: req.user.uni_id });
+    console.log(totalGroups);
+    return res.status(200).json(totalGroups);
+  } catch (error) {
+    console.error('Error getting total number of groups:', error);
+    return res.status(500).json({ message: 'Error getting total number of groups' });
+  }
+}
+
+exports.getAdminsCount = async (req, res) => {
+  try {
+    const totalAdmins = await Admin.countDocuments({ uni_id: req.user.uni_id });
+    
+    return res.status(200).json(totalAdmins);
+  } catch (error) {
+    console.error('Error getting total number of admins:', error);
+    return res.status(500).json({ message: 'Error getting total number of Admins' });
+  }
+}
 
 exports.deleteAdmin = async (req, res) => {
   await Admin.findByIdAndDelete(req.params.id).then(

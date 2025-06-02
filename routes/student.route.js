@@ -13,10 +13,7 @@ router.post("/login", controller.login)
 router.post("/preregister", checkDuplicateEmail, verifyEmail);
 router.post("/register", controller.register);
 
-//generate route requires, role, and email
-router.post("/otp/generate", checkEmailExists, otpLimiter, controller.generateOTP);
-router.post("/otp/verify", controller.verifyOTP);
-router.post("/password/reset", controller.resetPassword)
+
 router.patch("/update/questions", verifyJwt, controller.updateQuestions);
 router.get("/identify/learningstyle", verifyJwt, controller.calculateLearningStyle);
 router.get("/search", verifyJwt, controller.searchStudents);

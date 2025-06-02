@@ -22,7 +22,7 @@ checkEmailExists = async (req, res, next) => {
             res.status(404).send({message: "No account is associated with this email!", code: 'ACCOUNT_NOT_EXISTS'})
             return;
         }
-
+        req.user = result;
         next();
         
 

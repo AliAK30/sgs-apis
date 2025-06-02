@@ -1,15 +1,11 @@
 const Student = require("../models/student");
 const jwt = require("jsonwebtoken");
 const driver = require("../neo4j");
-const OTP = require('../models/otp');
-const { sendOTPEmail } = require('../utils/mailer');
 const {formatName, getAgeInYears} = require("../utils/helpers")
-const crypto = require('crypto');
 const containerClient = require("../azure");
 const sharp = require('sharp');
 const {ObjectId} = require('mongoose').Types
 const neo4j = require('neo4j-driver');
-const { response } = require("express");
 
 
 
@@ -66,7 +62,6 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  
   
   try {
     const { email, password } = req.body;
@@ -222,93 +217,6 @@ try {
   }
 }
 
-
-exports.verifyOTP = async (req, res) => {
-
-  try {
-      const { email, otp } = req.body;
-      // Find the most recent OTP for the email
-      const otpRecord = await OTP.findOne({email:email});
-      
-
-      if (otpRecord.otp !== otp) {
-        return res.status(400).json({ message: 'Invalid OTP!', code: 'OTP_INVALID' });
-      }
-
-      if(otpRecord.expiresAt < Date.now()) {
-        return res.status(400).json({ message: 'OTP has expired, please generate another OTP', code: 'OTP_EXPIRED' });
-      }
-      
-      if(!req.body.onlyVerify) return res.status(200).json({message: 'OTP verified!', code: 'OTP_VERIFIED'});
-      else return {statusCode: 200};
-      
-  }
-  catch (err) {
-    console.log(err)
-    return res.status(500).send({message: err.message, code: 'UNKNOWN_ERROR'})
-  }
-
-}
-
-exports.resetPassword = async (req, res) => {
-  try {
-    req.body.onlyVerify = true;
-    const result = await this.verifyOTP(req, res);
-    
-    if(result.statusCode === 400) return;
-
-    const {new_password, email} = req.body;
-
-    const student = await Student.findByUsername(email);
-    await student.setPassword(new_password);
-    await student.save();
-    return res.status(200).send({message: "Password Reset Successfull!"});
-    
-    
-  } catch (err) {
-    console.log(err)
-    return res.status(500).json({ message: err.message, code: 'UNKNOWN_ERROR' });
-  }
- 
-}
-
-
-exports.generateOTP = async (req, res) => {
-
-  try {
-    // Generate OTP
-    const { email } = req.body;
-    //crypto.random
-    //generate six digit otp
-    const otp = crypto.randomInt(100000, 999999).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 1 minutes from now
-    await OTP.findOneAndUpdate(
-      { email },
-      { otp: otp, expiresAt: expiresAt },
-      { new: true, upsert: true } //upsert creates the document if it does not exist
-    );
-    // Send OTP to email
-    const emailSent = await sendOTPEmail(email, otp);
-    
-    if (emailSent) {
-      return res.status(200).json({ message: 'OTP sent to your email'});
-    } else {
-      return res.status(500).json({ message: 'Failed to send OTP, Please try again later', code: 'OTP_SEND_FAILED' });
-    }
-    
-
-  }catch (err) {
-    console.log(err);
-    return res.status(500).json({ message: err.message, code: 'UNKNOWN_ERROR' });
-  }
-}
-
-/* $push: {
-  questions: {
-    $each: req.body, // Push multiple objects into the array
-  },
-  
-}, */
 
 exports.updateQuestions = async (req, res) => {
   try {
