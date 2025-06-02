@@ -24,8 +24,8 @@ var db = mongoose
 var app = express();
 app.set('trust proxy', 1 /* number of proxies between user and server */)
 //app.get('/ip', (request, response) => response.send(request.ip))
-const corsOptions = { origin: "https://edumatch.netlify.app", credentials: true };
-app.use(cors(corsOptions));
+//const corsOptions = { origin: "https://edumatch.netlify.app", credentials: true };
+app.use(cors());
 //app.options('*', cors(corsOptions));
 //MIDDLEWARES
 app.use(express.static(path.join(__dirname, "public")));
@@ -59,6 +59,9 @@ app.use("/admin", adminRouter); //used cors on admin routes
 
 studentRouter = require("./routes/student.route");
 app.use("/student", studentRouter); //used cors on student routes
+
+passwordRouter = require("./routes/password.route");
+app.use("/password", passwordRouter); //used cors on student routes
 
 //DEVELOPMENT SERVER
 
