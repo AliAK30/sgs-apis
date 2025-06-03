@@ -4,7 +4,7 @@ exports.checkRoleSysAdmin = async (req, res, next) => {
   await Admin.findById(req.userId).then(
     (user) => {
       if (user.role == "system_admin") {
-        req.user = user;
+        req.body.user = user;
         next();
         return;
       }
@@ -22,7 +22,7 @@ exports.checkRoleSuperuser = async (req, res, next) => {
   await Admin.findById(req.userId).then(
     (user) => {
       if (user.role == "superuser") {
-        req.user = user;
+        req.body.user = user;
         next();
         return;
       }

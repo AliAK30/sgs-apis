@@ -25,6 +25,12 @@ const Student = new mongoose.Schema({
     dim3: { name: String, score: Number },
     dim4: { name: String, score: Number },
   },
+  groups: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Group",
+      },
+    ],
   picture: { type: String },
   newUser: { type: Boolean, default: true },
   isSurveyCompleted: { type: Boolean, default: false},

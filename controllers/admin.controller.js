@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const csvParser = require("../helpers/csvParser");
 const passwordGenerator = require("password-generator");
 const {formatName, getAgeInYears} = require("../utils/helpers")
+const {ObjectId} = require('mongoose').Types
 
 
 exports.login = async (req, res) => {
@@ -88,7 +89,7 @@ exports.getStudentsCount = async (req, res) => {
 exports.getGroupsCount = async (req, res) => {
   try {
     const totalGroups = await Group.countDocuments({ uni_id: req.user.uni_id });
-    console.log(totalGroups);
+    
     return res.status(200).json(totalGroups);
   } catch (error) {
     console.error('Error getting total number of groups:', error);
@@ -104,6 +105,150 @@ exports.getAdminsCount = async (req, res) => {
   } catch (error) {
     console.error('Error getting total number of admins:', error);
     return res.status(500).json({ message: 'Error getting total number of Admins' });
+  }
+}
+
+
+exports.generateGroup = async (req, res) => {
+  try {
+    
+    let query = {uni_id: new ObjectId(req.body.uni_id), isSurveyCompleted: true}
+    //add gender
+    if(req.body.gender !== 'any') query.gender = req.body.gender
+
+    //add dim1
+    if(req.body.dim1 !== 'any') {
+      query["learning_style.dim1.name"] = req.body.dim1
+      switch(req.body.value1){
+        case 'weak':
+        query["learning_style.dim1.score"] = { $gte: 1, $lte: 3 };
+        break;
+
+        case 'moderate':
+        query["learning_style.dim1.score"] = { $gte: 4, $lte: 7 };
+        break;
+
+        case 'strong':
+        query["learning_style.dim1.score"] = { $gte: 8, $lte: 11 };
+        break;
+      }
+      
+    }
+    //else query["learning_style.dim1.score"] = { $eq : 0}
+
+    //add dim2
+    if(req.body.dim2 !== 'any') {
+      query["learning_style.dim2.name"] = req.body.dim2
+      switch(req.body.value2){
+        case 'weak':
+        query["learning_style.dim2.score"] = { $gte: 1, $lte: 3 };
+        break;
+
+        case 'moderate':
+        query["learning_style.dim2.score"] = { $gte: 4, $lte: 7 };
+        break;
+
+        case 'strong':
+        query["learning_style.dim2.score"] = { $gte: 8, $lte: 11 };
+        break;
+      }
+    }
+    //else query["learning_style.dim2.score"] = { $eq : 0}
+
+    //add dim3
+    if(req.body.dim3 !== 'any') {
+      query["learning_style.dim3.name"] = req.body.dim3
+      switch(req.body.value3){
+        case 'weak':
+        query["learning_style.dim3.score"] = { $gte: 1, $lte: 3 };
+        break;
+
+        case 'moderate':
+        query["learning_style.dim3.score"] = { $gte: 4, $lte: 7 };
+        break;
+
+        case 'strong':
+        query["learning_style.dim3.score"] = { $gte: 8, $lte: 11 };
+        break;
+      }
+    }
+    //else query["learning_style.dim3.score"] = { $eq : 0}
+
+    //add dim4
+    if(req.body.dim4 !== 'any') {
+      query["learning_style.dim4.name"] = req.body.dim4
+      switch(req.body.value4){
+        case 'weak':
+        query["learning_style.dim4.score"] = { $gte: 1, $lte: 3 };
+        break;
+
+        case 'moderate':
+        query["learning_style.dim4.score"] = { $gte: 4, $lte: 7 };
+        break;
+
+        case 'strong':
+        query["learning_style.dim4.score"] = { $gte: 8, $lte: 11 };
+        break;
+      }
+    }
+    //else query["learning_style.dim4.score"] = { $eq : 0}
+    //console.log(query);
+    const students = await Student.find(query).select("_id first_name last_name gender").lean();
+    //console.log(students)
+    return res.status(200).send(students);
+    
+
+  } catch (error) {
+    console.error('Error generating group:', error);
+    return res.status(500).json({ message: 'Unknown Error while generating group' });
+  }
+}
+
+exports.createGroup = async (req, res) => {
+  try {
+    req.body.uni_id = req.user.uni_id
+    req.body.uni_name = req.user.uni_name
+    //console.log(req.body)
+
+    // Step 1: Create the group
+    const newGroup = await Group.create(req.body);
+    console.log(newGroup._id)
+    // Step 2: Update each student by pushing the new group ID to their `groups` array
+    await Student.updateMany(
+      { _id: { $in: req.body.students } },
+      { $addToSet: { groups: newGroup._id } } // $addToSet avoids duplicates
+    );
+
+    console.log("Group created and students updated.");
+    return res.status(200).send(newGroup);
+
+  } catch (error) {
+    console.error('Error creating group:', error);
+    return res.status(500).json({ message: 'Unknown Error while creating group' });
+  }
+}
+
+
+exports.deleteGroup = async (req, res) => {
+  try {
+    // Step 1: Delete the group
+    const deletedGroup = await Group.findByIdAndDelete(req.params.id);
+    if (!deletedGroup) {
+      throw new Error("Group not found");
+    }
+
+    // Step 2: Remove group reference from students
+    await Student.updateMany(
+      { groups: req.params.id },
+      { $pull: { groups: req.params.id } }
+    );
+
+    console.log("Group deleted and student documents updated.");
+    return res.status(200).send(deletedGroup);
+
+  } catch (error) {
+    console.error('Error deleting group:', error);
+    return res.status(500).json({ message: 'Unknown Error while deleting group' });
   }
 }
 

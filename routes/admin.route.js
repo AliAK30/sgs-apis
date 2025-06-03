@@ -10,6 +10,9 @@ router.post("/login", controller.login);
 router.post("/register", verifyJwt, checkRoleSysAdmin, checkDuplicateEmail, verifyEmail, controller.registerAdmin);
 router.get("/students/count", verifyJwt, checkRoleAdmin, controller.getStudentsCount)
 router.get("/groups/count", verifyJwt, checkRoleAdmin, controller.getGroupsCount)
+router.post("/groups/generate", verifyJwt, checkRoleAdmin, controller.generateGroup)
+router.post("/groups/create", verifyJwt, checkRoleAdmin, controller.createGroup)
+router.delete("/groups/delete/:id", verifyJwt, checkRoleAdmin, controller.deleteGroup)
 router.get("/count", verifyJwt, checkRoleAdmin, controller.getAdminsCount)
 router.delete("/delete/admin/:id", verifyJwt, checkRoleSysAdmin, controller.deleteAdmin)
 router.delete("/delete/student/:studentid", verifyJwt, checkRoleAdmin, controller.deleteStudent)

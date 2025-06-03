@@ -17,7 +17,7 @@ const groupSchema = new mongoose.Schema({
   },
   gender: {
     type: String,
-    enum: ["any", "male", "female"],
+    enum: ["any", "Male", "Female"],
     default: "any",
   },
   students: [
@@ -27,28 +27,28 @@ const groupSchema = new mongoose.Schema({
     },
   ],
   dim1: {
-    name: { type: String, enum: ["any", "active", "reflective"] },
+    name: { type: String, enum: ["any", "Active", "Reflective"] },
     preference: {
       type: String,
       enum: ["balanced", "weak", "moderate", "strong"],
     },
   },
   dim2: {
-    name: { type: String, enum: ["any", "sensing", "intuitive"] },
+    name: { type: String, enum: ["any", "Sensing", "Intuitive"] },
     preference: {
       type: String,
       enum: ["balanced", "weak", "moderate", "strong"],
     },
   },
   dim3: {
-    name: { type: String, enum: ["any", "visual", "verbal"] },
+    name: { type: String, enum: ["any", "Visual", "Verbal"] },
     preference: {
       type: String,
       enum: ["balanced", "weak", "moderate", "strong"],
     },
   },
   dim4: {
-    name: { type: String, enum: ["any", "global", "sequential"] },
+    name: { type: String, enum: ["any", "Global", "Sequential"] },
     preference: {
       type: String,
       enum: ["balanced", "weak", "moderate", "strong"],
