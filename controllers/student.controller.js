@@ -488,7 +488,7 @@ exports.getSimilarities = async (req, res) => {
 
 exports.getGroupsOfAStudent = async (req, res) => {
   try {
-    const groups = await Group.find({ students: req.params.id });
+    const groups = await Group.find({ students: req.params.id }).select("-created_at -students");
     res.status(200).send(groups);
   } catch {
     console.error('Cant fetch groups',err);
