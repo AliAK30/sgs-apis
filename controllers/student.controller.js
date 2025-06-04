@@ -500,7 +500,12 @@ exports.getOneGroup = async (req, res) => {
   try {
     
     const group = await Group.findById(req.params.id).select("students").lean();
-    const objectIds = group.students.map(id => new ObjectId(id));
+    const objectIds = group.students.map(id => 
+    {
+      if(id!== req.userId)
+      return new ObjectId(id)
+    }
+    );
     
     const students = await Student.find({ _id: { $in: objectIds } }).select("_id first_name last_name gender picture");
     
