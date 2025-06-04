@@ -1,4 +1,5 @@
 const Student = require("../models/student");
+const Group = require("../models/group");
 const jwt = require("jsonwebtoken");
 const driver = require("../neo4j");
 const {formatName, getAgeInYears} = require("../utils/helpers")
@@ -483,6 +484,16 @@ exports.getSimilarities = async (req, res) => {
     return res.status(500).send({message: 'Error checking similarity'});
   }
 
+}
+
+exports.getGroupsOfAStudent = async (req, res) => {
+  try {
+    const groups = await Group.find({ students: req.params.id });
+    res.status(200).send(groups);
+  } catch {
+    console.error('Cant fetch groups',err);
+    return res.status(500).send({message: 'Error fetching groups'});
+  }
 }
 
 const addToGraph = async (student) => {

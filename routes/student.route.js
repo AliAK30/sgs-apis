@@ -21,5 +21,6 @@ router.post("/upload/picture", verifyJwt, upload.single('image'), controller.upl
 router.get("/similarity/:id",verifyJwt, controller.getSimilarity)
 router.get("/similarities/:id", verifyJwt, controller.getSimilarities)
 router.get("/:id", verifyJwt, controller.getStudent)
+router.get("/:id/groups", verifyJwt, controller.getGroupsOfAStudent);
 
 module.exports = router
