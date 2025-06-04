@@ -12,11 +12,13 @@ router.get("/students/count", verifyJwt, checkRoleAdmin, controller.getStudentsC
 router.get("/groups/count", verifyJwt, checkRoleAdmin, controller.getGroupsCount)
 router.post("/groups/generate", verifyJwt, checkRoleAdmin, controller.generateGroup)
 router.post("/groups/create", verifyJwt, checkRoleAdmin, controller.createGroup)
-router.delete("/groups/delete/:id", verifyJwt, checkRoleAdmin, controller.deleteGroup)
+router.get("/groups", verifyJwt, checkRoleAdmin, controller.getGroups);
 router.get("/count", verifyJwt, checkRoleAdmin, controller.getAdminsCount)
+router.post("/register/students", verifyJwt, checkRoleAdmin, controller.registerStudents)
+router.get("/group/:id", verifyJwt, checkRoleAdmin, controller.getOneGroup);
+router.delete("/groups/delete/:id", verifyJwt, checkRoleAdmin, controller.deleteGroup)
 router.delete("/delete/admin/:id", verifyJwt, checkRoleSysAdmin, controller.deleteAdmin)
 router.delete("/delete/student/:studentid", verifyJwt, checkRoleAdmin, controller.deleteStudent)
-router.post("/register/students", verifyJwt, checkRoleAdmin, controller.registerStudents)
 
 
 

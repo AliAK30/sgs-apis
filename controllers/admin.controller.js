@@ -108,6 +108,33 @@ exports.getAdminsCount = async (req, res) => {
   }
 }
 
+exports.getGroups = async (req, res) => {
+  try {
+    
+    const groups = await Group.find({}).select("-created_at -students");
+    
+    return res.status(200).send(groups);
+
+  } catch (error) {
+    console.error('Error fetching groups:', error);
+    return res.status(500).json({ message: 'Unknown Error while fetching groups' });
+  }
+}
+
+exports.getOneGroup = async (req, res) => {
+  try {
+    
+    const group = await Group.findById(req.params.id).select("_id students").lean();
+    
+    return res.status(200).send(group);
+
+  } catch (error) {
+    console.error('Error fetching group:', error);
+    return res.status(500).json({ message: 'Unknown Error while fetching group' });
+  }
+}
+
+
 
 exports.generateGroup = async (req, res) => {
   try {
