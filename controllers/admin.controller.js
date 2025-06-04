@@ -124,9 +124,13 @@ exports.getGroups = async (req, res) => {
 exports.getOneGroup = async (req, res) => {
   try {
     
-    const group = await Group.findById(req.params.id).select("_id students").lean();
+    const group = await Group.findById(req.params.id).select("students").lean();
+    const objectIds = group.students.map(id => new ObjectId(id));
     
-    return res.status(200).send(group);
+    const students = await Student.find({ _id: { $in: objectIds } }).select("_id first_name last_name gender picture");
+    
+    return res.status(200).send(students);
+
 
   } catch (error) {
     console.error('Error fetching group:', error);
@@ -260,9 +264,7 @@ exports.deleteGroup = async (req, res) => {
   try {
     // Step 1: Delete the group
     const deletedGroup = await Group.findByIdAndDelete(req.params.id);
-    if (!deletedGroup) {
-      throw new Error("Group not found");
-    }
+
 
     // Step 2: Remove group reference from students
     await Student.updateMany(
@@ -271,6 +273,7 @@ exports.deleteGroup = async (req, res) => {
     );
 
     console.log("Group deleted and student documents updated.");
+    console.log(deletedGroup)
     return res.status(200).send(deletedGroup);
 
   } catch (error) {

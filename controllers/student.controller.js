@@ -496,6 +496,22 @@ exports.getGroupsOfAStudent = async (req, res) => {
   }
 }
 
+exports.getOneGroup = async (req, res) => {
+  try {
+    
+    const group = await Group.findById(req.params.id).select("students").lean();
+    const objectIds = group.students.map(id => new ObjectId(id));
+    
+    const students = await Student.find({ _id: { $in: objectIds } }).select("_id first_name last_name gender picture");
+    
+    return res.status(200).send(students);
+
+  } catch (error) {
+    console.error('Error fetching group:', error);
+    return res.status(500).json({ message: 'Unknown Error while fetching group' });
+  }
+}
+
 const addToGraph = async (student) => {
   
   try {
