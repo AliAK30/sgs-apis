@@ -31,7 +31,7 @@ exports.register = async (req, res) => {
  try {
 
   if (req.body.email) {
-      req.body.email = req.body.email.toLowerCase();
+      req.body.email = req.body.email.trim().toLowerCase();
     }
 
   if (req.body.first_name) {
@@ -70,7 +70,7 @@ exports.login = async (req, res) => {
 
     const authenticate = Student.authenticate()
     
-    const response = await authenticate(email.toLowerCase(), password)
+    const response = await authenticate(email.trim().toLowerCase(), password)
     const user = response.user;
     
     if(!user)
@@ -132,6 +132,19 @@ exports.getStudent = async (req, res) => {
     return res.status(500).json({ message: 'Error getting details' });
   }
   
+}
+
+exports.updateStudent = async (req, res) => {
+
+  try {
+    
+    await Student.findByIdAndUpdate(req.userId, {$set: req.body}, {runValidators: true});
+    return res.status(200).json({newUser:false});
+    
+  } catch(error) {
+    console.error('Updating student error:', error);
+    return res.status(500).json({ message: 'Error updating student' });
+  }
 }
 
 exports.searchStudents = async (req, res) => {
@@ -357,15 +370,19 @@ exports.calculateLearningStyle = async (req, res) => {
     if (result.modifiedCount >= 0) {
       console.log("Learning style updated successfully.");
       student.learning_style = learning_style;
+      return res.status(200).json({student});
       if(addToGraph(student))
       {
-          return res.status(200).json({student: student,message: "Learning style updated successfully.",});
+        return res.status(200).json({student: student,message: "Learning style updated successfully.",});
       } else {
         return res.status(500).send({ message: 'Our Server is down, please try again later, Sorry for the inconvenience!' });
       }
 
       
+    } else {
+      return res.status(500).send({ message: 'Our Database Server is down, please try again later, Sorry for the inconvenience!' });
     }
+
   } catch (error) {
     console.error("Error identifing learning style:", error);
     res.status(500).send({ message: error });
@@ -490,7 +507,7 @@ exports.getGroupsOfAStudent = async (req, res) => {
   try {
     const groups = await Group.find({ students: req.params.id }).select("-created_at -students");
     res.status(200).send(groups);
-  } catch {
+  } catch(err){
     console.error('Cant fetch groups',err);
     return res.status(500).send({message: 'Error fetching groups'});
   }

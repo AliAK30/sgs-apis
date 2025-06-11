@@ -13,7 +13,7 @@ router.post("/login", controller.login)
 router.post("/preregister", checkDuplicateEmail, verifyEmail);
 router.post("/register", controller.register);
 
-
+router.patch("/update/self", verifyJwt, controller.updateStudent);
 router.patch("/update/questions", verifyJwt, controller.updateQuestions);
 router.get("/identify/learningstyle", verifyJwt, controller.calculateLearningStyle);
 router.get("/search", verifyJwt, controller.searchStudents);

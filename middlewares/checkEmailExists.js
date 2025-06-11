@@ -15,7 +15,7 @@ checkEmailExists = async (req, res, next) => {
     }
 
     try {
-        const result = await User.findByUsername(req.body.email)
+        const result = await User.findByUsername(req.body.email.toLowerCase())
         //console.log(result);
         if(result === null)
         {
