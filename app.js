@@ -7,7 +7,7 @@ var bodyParser = require("body-parser");
 const University = require("./models/university");
 const {globalLimiter} = require("./middlewares/rateLimiter")
 const http = require('http');
-const socketIo = require('socket.io');
+const {Server} = require('socket.io');
 const verifyJwt = require("./middlewares/verifyJwt")
 
 
@@ -40,7 +40,7 @@ const corsOptions = {
 }
 
 // INITIALIZING SOCKET.IO
-const io = socketIo(server, {
+const io = new Server(server, {
   //cors: corsOptions,
   // Connection settings for mobile compatibility
   pingTimeout: 60000,
@@ -61,7 +61,7 @@ io.use(async (socket, next) => {
     const userId = socket.handshake.auth.userId;
     const req= {headers: {
       authorization: `Bearer ${token}`,
-      userId: userId
+      userid: userId
     }}
 
     const res = {edumatch_socket: socket}
@@ -115,6 +115,11 @@ app.use("/student", studentRouter); //used cors on student routes
 
 passwordRouter = require("./routes/password.route");
 app.use("/password", passwordRouter);
+
+
+// Track connections by user ID
+//const userConnections = new Map(); // userId -> Set(socketIds)
+
 
 // SOCKET.IO CONNECTION HANDLING
 io.on('connection', (socket) => {
@@ -172,6 +177,8 @@ io.on('connection', (socket) => {
         lastSeen: new Date()
       });
     }
+
+    delete socket.userId;
   });
   
   // Handle errors

@@ -137,7 +137,7 @@ exports.getStudent = async (req, res) => {
 exports.updateStudent = async (req, res) => {
 
   try {
-    console.log("here in update student");
+   
     await Student.findByIdAndUpdate(req.userId, {$set: req.body}, {runValidators: true});
     return res.status(200).json({newUser:false});
     

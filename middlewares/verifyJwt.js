@@ -17,7 +17,7 @@ verifyToken = async (req, res, next) => {
     return res.status(400).json({ message: 'Please set authorization headers', code: 'BAD_REQUEST' });
   }
 
-  let userId = req.headers.userId;
+  let userId = req.headers.userid;
 
   //handle both socket.io and express app verification cases
   if (!token || !userId){
@@ -32,7 +32,6 @@ verifyToken = async (req, res, next) => {
   const user = await Student.findById(userId).select('_id first_name last_name email');
     
   if (!user || decoded.id !== userId) {
-    
     if(res.edumatch_socket) return next(new Error('Invalid authentication'));
     else return res.status(401).send({message: "Your are not authorized to make this request!"});
   }
@@ -47,7 +46,7 @@ verifyToken = async (req, res, next) => {
     req.user = user;
   }
   
-  next();
+  return next();
 
   } catch (err) {
     console.log(err)
