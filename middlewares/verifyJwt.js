@@ -1,50 +1,60 @@
 const jwt = require("jsonwebtoken");
+const Student = require("../models/student");
 
-verifyToken = (req, res, next) => {
-  //req.userId = "682a4b884d3719397e8efa07";
-  //next();
-  //return;
-  let token;
+verifyToken = async (req, res, next) => {
+  
+  try {
+    let token;
   try {
     token = req.headers.authorization.split(" ")[1]
-  } catch (err) {
+  } catch(err) {
     console.log(`IP: ${req.ip}`);
     console.log(`Origin: ${req.get('origin')}`)
     console.log(`Referer: ${req.get('referer')}`)
     console.log(`User Agent: ${req.get('user-agent')}`);
     console.log(err)
     console.log(err)
-    return res.status(400).json({ message: 'Please set authentication headers', code: 'BAD_REQUEST' });
+    return res.status(400).json({ message: 'Please set authorization headers', code: 'BAD_REQUEST' });
   }
 
-  try {
-  
-  if (!token) {
-    console.log(`IP: ${req.ip}`);
-    console.log(`Origin: ${req.get('origin')}`)
-    console.log(`Referer: ${req.get('referer')}`)
-    console.log(`User Agent: ${req.get('user-agent')}`);
-    console.log(err)
-    return res.status(403).send({ message: "No token provided!" });
+  let userId = req.headers.userId;
+
+  //handle both socket.io and express app verification cases
+  if (!token || !userId){
+    if(res.edumatch_socket) return next(new Error('Authentication required'));
+    else return res.status(400).json({ message: 'Please provide a token and userId', code: 'BAD_REQUEST' });
+  } 
+
+  // Verify JWT token
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+  // Verify user exists and token belongs to the user
+  const user = await Student.findById(userId).select('_id first_name last_name email');
+    
+  if (!user || decoded.id !== userId) {
+    
+    if(res.edumatch_socket) return next(new Error('Invalid authentication'));
+    else return res.status(401).send({message: "Your are not authorized to make this request!"});
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).send({
-        message: "Unauthorized!",
-      });
-    }
+  if(res.edumatch_socket){
+
+    res.edumatch_socket.userId = decoded.id;
+    res.edumatch_socket.user = user;
+  } else {
 
     req.userId = decoded.id;
-    next();
-  });
-} catch (err) {
-  console.log(err)
-  return res.status(500).json({ message: err.message, code: 'UNKNOWN_ERROR' });
+    req.user = user;
+  }
+  
+  next();
+
+  } catch (err) {
+    console.log(err)
+    return res.status(500).json({ message: err.message, code: 'UNKNOWN_ERROR' });
+  }
 }
-  
-  
-};
+
 
 
 module.exports = verifyToken;

@@ -6,9 +6,9 @@ var mongoose = require("mongoose");
 var bodyParser = require("body-parser");
 const University = require("./models/university");
 const {globalLimiter} = require("./middlewares/rateLimiter")
-
-
-
+const http = require('http');
+const socketIo = require('socket.io');
+const verifyJwt = require("./middlewares/verifyJwt")
 
 
 //MONGODB DATABASE CONNECTION
@@ -25,11 +25,61 @@ var db = mongoose
 
 //Express APP
 var app = express();
+
+//HTTP SERVER FOR SOCKET.IO
+const server = http.createServer(app);
+
+const corsOptions = {
+    origin: [
+      //"https://edumatch.netlify.app", 
+      "http://192.168.0.100:8081",
+      "http://localhost:8081",  
+    ],
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+    credentials: true
+}
+
+// INITIALIZING SOCKET.IO
+const io = socketIo(server, {
+  //cors: corsOptions,
+  // Connection settings for mobile compatibility
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  upgradeTimeout: 30000,
+  allowEIO3: true // Support for older clients if needed
+});
+
+// Store io instance in app for access in routes
+app.set('io', io);
+
+// Authentication middleware for Socket.IO
+io.use(async (socket, next) => {
+
+  try {
+
+    const token = socket.handshake.auth.token;
+    const userId = socket.handshake.auth.userId;
+    const req= {headers: {
+      authorization: `Bearer ${token}`,
+      userId: userId
+    }}
+
+    const res = {edumatch_socket: socket}
+    verifyJwt(req, res, next);
+
+  } catch (error) {
+    console.error('Socket authentication error:', error);
+    next(new Error('Authentication failed'));
+  }
+});
+
+
+
 //app.set('trust proxy', 1 /* number of proxies between user and server */)
 //app.get('/ip', (request, response) => response.send(request.ip))
-//const corsOptions = { origin: "http://localhost:8081", credentials: truenpm };
-app.use(cors());
-//app.options('*', cors(corsOptions));
+
+app.use(cors(corsOptions));
+
 //MIDDLEWARES
 app.use(express.static(path.join(__dirname, "public")));
 app.use(bodyParser.text({ type: "text/csv", limit: "10mb" }));
@@ -65,13 +115,91 @@ app.use("/student", studentRouter); //used cors on student routes
 
 passwordRouter = require("./routes/password.route");
 app.use("/password", passwordRouter);
-//DEVELOPMENT SERVER
+
+// SOCKET.IO CONNECTION HANDLING
+io.on('connection', (socket) => {
+
+  console.log(`User connected: ${socket.user.first_name} ${socket.user.last_name} (${socket.id})`);
+  
+  // explicitly joining user to their personal room when they authenticate
+  socket.on('join_user_room', (userId) => {
+
+    if (userId) {
+      socket.join(`user_${userId}`);
+      socket.userId = userId; // Store userId in socket for cleanup
+      console.log(`User ${userId} joined room user_${userId}`);
+      
+      // Notify friends that user is online
+      socket.broadcast.emit('user_status_change', { 
+        user: socket.user, 
+        isOnline: true,
+        lastSeen: new Date()
+      });
+    }
+  });
+  
+  // Handle user going online explicitly
+  socket.on('user_online', (userId) => {
+    if (userId) {
+      socket.broadcast.emit('user_status_change', { 
+        user: socket.user,
+        isOnline: true,
+        lastSeen: new Date()
+      });
+    }
+  });
+  
+  // Handle user going offline explicitly
+  socket.on('user_offline', (userId) => {
+    if (userId) {
+      socket.broadcast.emit('user_status_change', { 
+        user: socket.user, 
+        isOnline: false,
+        lastSeen: new Date()
+      });
+    }
+  });
+  
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+    
+    // Notify friends that user went offline
+    if (socket.userId) {
+      socket.broadcast.emit('user_status_change', { 
+        user: socket.user, 
+        isOnline: false,
+        lastSeen: new Date()
+      });
+    }
+  });
+  
+  // Handle errors
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
+  });
+
+});
+
+// SOCKET.IO ERROR HANDLING
+io.engine.on("connection_error", (err) => {
+  console.log("Socket.IO connection error:", err.req);
+  console.log("Socket.IO connection error code:", err.code);
+  console.log("Socket.IO connection error message:", err.message);
+  console.log("Socket.IO connection error context:", err.context);
+});
+
 
 //Get port from environment and store in Express.
 const port = process.env.PORT || "3000";
-app.listen(port);
-console.log("Server listening on port " + port);
-console.log(`Visit http://localhost:${port}/`);
+
+//DEVELOPMENT SERVER
+server.listen(port, ()=> {
+  console.log("Server listening on port " + port);
+  console.log(`Visit http://localhost:${port}/`);
+  console.log("Socket.IO is ready for real-time connections");
+});
+
 
 
 
