@@ -59,10 +59,12 @@ io.use(async (socket, next) => {
 
     const token = socket.handshake.auth.token;
     const userId = socket.handshake.auth.userId;
+    const role = '/'+socket.handshake.auth.role;
+    
     const req= {headers: {
       authorization: `Bearer ${token}`,
       userid: userId
-    }}
+    }, baseUrl: role}
 
     const res = {edumatch_socket: socket}
     verifyJwt(req, res, next);

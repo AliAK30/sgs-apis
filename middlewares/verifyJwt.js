@@ -1,21 +1,22 @@
 const jwt = require("jsonwebtoken");
 const Student = require("../models/student");
+const Admin = require("../models/admin");
 
 verifyToken = async (req, res, next) => {
   
   try {
     let token;
-  try {
-    token = req.headers.authorization.split(" ")[1]
-  } catch(err) {
-    console.log(`IP: ${req.ip}`);
-    console.log(`Origin: ${req.get('origin')}`)
-    console.log(`Referer: ${req.get('referer')}`)
-    console.log(`User Agent: ${req.get('user-agent')}`);
-    console.log(err)
-    console.log(err)
-    return res.status(400).json({ message: 'Please set authorization headers', code: 'BAD_REQUEST' });
-  }
+    try {
+      token = req.headers.authorization.split(" ")[1]
+    } catch(err) {
+      console.log(`IP: ${req.ip}`);
+      console.log(`Origin: ${req.get('origin')}`)
+      console.log(`Referer: ${req.get('referer')}`)
+      console.log(`User Agent: ${req.get('user-agent')}`);
+      console.log(err)
+      console.log(err)
+      return res.status(400).json({ message: 'Please set authorization headers', code: 'BAD_REQUEST' });
+    }
 
   let userId = req.headers.userid;
 
@@ -29,7 +30,10 @@ verifyToken = async (req, res, next) => {
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
   // Verify user exists and token belongs to the user
-  const user = await Student.findById(userId).select('_id first_name last_name email');
+  let User;
+  if(req.baseUrl.substring(1) === "student") User = Student;
+  else User = Admin;
+  const user = await User.findById(userId).select('_id first_name last_name email uni_id');
     
   if (!user || decoded.id !== userId) {
     if(res.edumatch_socket) return next(new Error('Invalid authentication'));

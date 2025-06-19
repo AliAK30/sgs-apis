@@ -11,7 +11,7 @@ exports.login = async (req, res) => {
     try {
       const { email, password } = req.body;  
       const authenticate = Admin.authenticate()
-      const response = await authenticate(email.toLowerCase(), password)
+      const response = await authenticate(email.trim().toLowerCase(), password)
       const user = response.user;
       
       if(!user)
