@@ -31,7 +31,7 @@ const server = http.createServer(app);
 
 const corsOptions = {
     origin: [
-      //"https://edumatch.netlify.app", 
+      "https://edumatch.netlify.app", 
       "http://192.168.0.100:8081",
       "http://localhost:8081",  
     ],
@@ -41,7 +41,7 @@ const corsOptions = {
 
 // INITIALIZING SOCKET.IO
 const io = new Server(server, {
-  //cors: corsOptions,
+  cors: corsOptions,
   // Connection settings for mobile compatibility
   pingTimeout: 60000,
   pingInterval: 25000,
@@ -77,7 +77,7 @@ io.use(async (socket, next) => {
 
 
 
-//app.set('trust proxy', 1 /* number of proxies between user and server */)
+app.set('trust proxy', 1 /* number of proxies between user and server */)
 //app.get('/ip', (request, response) => response.send(request.ip))
 
 app.use(cors(corsOptions));
