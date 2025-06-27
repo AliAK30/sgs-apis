@@ -29,7 +29,13 @@ var app = express();
 //HTTP SERVER FOR SOCKET.IO
 const server = http.createServer(app);
 
-const corsOptions = {origin: "https://edumatch.netlify.app",credentials: true}
+const corsOptions = {
+    origin: [
+      "https://edumatch.netlify.app", 
+    ],
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+    credentials: true
+}
 
 // INITIALIZING SOCKET.IO
 const io = new Server(server, {
