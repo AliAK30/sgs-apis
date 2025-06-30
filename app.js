@@ -32,8 +32,12 @@ const server = http.createServer(app);
 const corsOptions = {
     origin: [
       "https://edumatch.netlify.app", 
+      "http://localhost:8081",
+      //"https://localhost:8080",
+      "https://edumatch.southeastasia.cloudapp.azure.com"
+
     ],
-    methods: ["GET", "POST", "PATCH", "DELETE"],
+    methods: ["GET", "POST", "PATCH", "DELETE", "PUT"],
     credentials: true
 }
 
@@ -76,7 +80,7 @@ io.use(async (socket, next) => {
 
 
 app.set('trust proxy', 1 /* number of proxies between user and server */)
-//app.get('/ip', (request, response) => response.send(request.ip))
+
 
 app.use(cors(corsOptions));
 
@@ -89,9 +93,8 @@ app.use(globalLimiter); //rate limit
 
 
 //ROUTES
-/* app.get("/", corsObj, (req, res) => {
-  res.status(200).send({ message: "hello" });
-}); */
+
+//app.get('/ip', (request, response) => response.send(request.ip))
 
 app.get("/universities", async (req, res) => {
   try {
@@ -115,10 +118,6 @@ app.use("/student", studentRouter); //used cors on student routes
 
 passwordRouter = require("./routes/password.route");
 app.use("/password", passwordRouter);
-
-
-// Track connections by user ID
-//const userConnections = new Map(); // userId -> Set(socketIds)
 
 
 // SOCKET.IO CONNECTION HANDLING
@@ -208,36 +207,3 @@ server.listen(port, ()=> {
 });
 
 
-
-
-//NEO4J CONNECTION
-
-//const neo4j = require('neo4j-driver')
-
-//const driver = neo4j.driver(process.env.NEO4J_URI, neo4j.auth.basic(process.env.NEO4J_USER, process.env.NEO4J_PASSWORD));
-//driver.getServerInfo().then(serverInfo=>console.log('Connected to Neo4J', serverInfo)).catch(err=>console.log(err));
-
-
-/* const myFunc = async () => {
-  
-  // Use the driver to run queries
-  for(let i = 1; i < 45; i++)
-  {
-      await driver.executeQuery(
-          'CREATE (:Option {name: $name})',
-           { name: `a${i}` },
-           { database: 'neo4j' }
-      )
-      await driver.executeQuery(
-          'CREATE (:Option {name: $name})',
-           { name: `b${i}` },
-           { database: 'neo4j' }
-      )
-        
-  }
-  
-  console.log("done")
-  await driver.close()
-
-};
-myFunc(); */

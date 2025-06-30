@@ -1,5 +1,6 @@
 const {Readable} = require("stream")
 const csv = require("csv-parser")
+const sharp = require('sharp');
 
 exports.formatName = (name) => {
   return name
@@ -35,3 +36,24 @@ exports.parseCSVFromText = text => {
         .on('error', reject);
     });
 }
+
+exports.compressImage = async buffer => {
+  const options = {
+    width: 256,       // Max width in pixels
+    height: 256,      // Max height in pixels
+  };
+
+  return sharp(buffer)
+    .resize(options.width, options.height, {
+      fit: 'inside',
+      withoutEnlargement: true
+    }).toBuffer();
+}
+
+// Helper function to emit real-time events
+exports.emitToUser = (io, userId, event, data) => {
+  io.to(`user_${userId}`).emit(event, data);
+};
+
+// Helper function to get user's socket room
+exports.getUserRoom = (userId) => `user_${userId}`;

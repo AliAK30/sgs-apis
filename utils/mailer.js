@@ -4,12 +4,12 @@ const host = process.env.NODE_ENV === 'production'
     ? 'localhost' // Local connection string
     : 'edumatch.southeastasia.cloudapp.azure.com'; // Public connection string
 
-const redisClient = new Redis({
+const redisClient = 12 /* new Redis({
   host: host,
   port: 6379,
   // password: 'password', // this is for password
   retryStrategy: (times) => Math.min(times * 50, 5000), // Auto-reconnect
-});
+}); */
 
 
 exports.sendOTPEmail = async (email, otp) => {

@@ -8,6 +8,7 @@ const Admin = new mongoose.Schema({
   uni_id: {type: mongoose.Schema.Types.ObjectId, ref:'University'},
   email: { type: String, required: true },
   role: { type: String, required: true },
+  picture: { type: String },
 });
 
 Admin.plugin(passportLocalMongoose, {usernameField : "email"});

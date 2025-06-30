@@ -1,30 +1,13 @@
 const Student = require("../models/student");
 const Group = require("../models/group");
+const Friendship = require("../models/friendship")
+const Notification = require("../models/notification")
 const jwt = require("jsonwebtoken");
-const driver = require("../neo4j");
-const {formatName, getAgeInYears} = require("../utils/helpers")
+const {driver, addToGraph} = require("../neo4j");
+const {formatName, getAgeInYears, compressImage, emitToUser, getUserRoom} = require("../utils/helpers")
 const containerClient = require("../azure");
-const sharp = require('sharp');
 const {ObjectId} = require('mongoose').Types
 const neo4j = require('neo4j-driver');
-
-
-
-async function compressImage(buffer) {
-  const options = {
-    width: 256,       // Max width in pixels
-    height: 256,      // Max height in pixels
-  };
-
-  return sharp(buffer)
-    .resize(options.width, options.height, {
-      fit: 'inside',
-      withoutEnlargement: true
-    }).toBuffer();
-}
-
-
-
 
 exports.register = async (req, res) => {
 
@@ -65,6 +48,8 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   
   try {
+    const io = req.app.get('io');
+    
     const { email, password } = req.body;
 
 
@@ -72,6 +57,10 @@ exports.login = async (req, res) => {
     
     const response = await authenticate(email.trim().toLowerCase(), password)
     const user = response.user;
+    const sockets = await io.in(`user_${user.id}`).fetchSockets();
+    if (sockets.length > 0) {
+      return res.status(400).json({message: "You already have a session online!", code:'ALREADY_LOGGED_IN'})
+    }
     
     if(!user)
     {
@@ -101,6 +90,252 @@ exports.login = async (req, res) => {
   
 };
 
+exports.checkFriendRequest = async (req, res) => {
+  try {
+    const { recipientId } = req.params;
+    const requesterId = req.userId; // Assuming user is authenticated
+    // Validate recipient exists
+    const recipient = await Student.findById(recipientId);
+    if (!recipient) {
+      return res.status(404).json({ message: 'Student does not exist', code:'STUDENT_NOT_FOUND' });
+    }
+
+    // Check if friendship already exists
+    const friendRequest = await Friendship.findOne({
+      $or: [
+        { requester: requesterId, recipient: recipientId },
+        { requester: recipientId, recipient: requesterId }
+      ]
+    }).select("status");
+    return res.status(200).json(friendRequest);
+  }catch (error) {
+    console.error('Error retrieving friend request:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+exports.sendFriendRequest =  async (req, res) => {
+  try {
+
+    
+    const { recipientId } = req.body;
+    const requesterId = req.userId; // Assuming user is authenticated
+
+    // Validate recipient exists
+    const recipient = await Student.findById(recipientId);
+    if (!recipient) {
+      return res.status(404).json({ message: 'Student does not exist', code:'STUDENT_NOT_FOUND' });
+    }
+
+    // Check if friendship already exists
+    const existingFriendship = await Friendship.findOne({
+      $or: [
+        { requester: requesterId, recipient: recipientId },
+        { requester: recipientId, recipient: requesterId }
+      ]
+    });
+    if(existingFriendship) {
+      if (existingFriendship.status === 'accepted') {
+      return res.status(400).json({ 
+        message: 'You are already friends', code:"FRIENDS_ALREADY" 
+      });
+    } else if(existingFriendship.status === 'pending') {
+      return res.status(400).json({ 
+        message: 'You have already sent a friend request to this user', code:"FRIEND_REQUEST_PENDING" 
+      });
+    } else if (existingFriendship.status === 'blocked') {
+      return res.status(400).json({ 
+        message: 'You can not send a friend request to this user, because you have already been rejected by this user.', code:"FRIEND_REQUEST_DENIED" 
+      });
+    }
+    }
+    
+
+    // Create friendship request
+    const friendship = new Friendship({
+      requester: requesterId,
+      recipient: recipientId,
+      status: 'pending'
+    });
+
+    await friendship.save();
+
+    // Populate requester details for real-time notification
+    
+    const populatedFriendship = {recipientId: recipientId, requester: {
+        _id: req.userId,
+        first_name: req.user.first_name,
+        last_name: req.user.last_name,
+        picture: req.user.picture,
+        uni_name: req.user.uni_name,
+        friendshipId: friendship._id
+      } };
+
+    //Create friend request notification
+    const notification = new Notification({
+      recipient: recipientId,
+      payload: populatedFriendship,
+      type: 'fr'
+    });
+    await notification.save();
+
+    // REAL-TIME: Notify recipient
+    const io = req.app.get('io');
+    emitToUser(io, recipientId, 'friend_request_received', populatedFriendship);
+
+    res.status(200).json({
+      message: 'Friend request sent successfully',
+      status: friendship.status,
+    });
+
+  } catch (error) {
+    console.error('Error sending friend request:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+exports.respondToFriendRequest = async (req, res) => {
+  try {
+    console.log("respond to friend request run")
+    const { friendshipId } = req.params;
+    const { action } = req.body; // 'accept' or 'decline'
+    const userId = req.userId;
+
+    const friendship = await Friendship.findById(friendshipId);
+    
+    if (!friendship) {
+      return res.status(404).json({ message: 'Friend request not found', code:'NOT_FOUND' });
+    }
+
+    // Verify user is the recipient
+    if (friendship.recipient.toString() !== userId.toString()) {
+      return res.status(403).json({ message: 'You are not authorized to accept this friend request', CODE:'UNAUTHORIZED' });
+    }
+
+    if (friendship.status !== 'pending') {
+      return res.status(400).json({ message: 'You have already reponded to this friend request', CODE:'ALREADY_RESPONDED' });
+    }
+
+    if (action === 'accept') {
+      friendship.status = 'accepted';
+      friendship.respondedAt = new Date();
+      await friendship.save();
+
+        
+
+      // Populate both users for real-time notification
+      const populatedFriendship = {requesterId: friendship.requester.toString(), recipient: {
+        _id: req.userId,
+        first_name: req.user.first_name,
+        last_name: req.user.last_name,
+        picture: req.user.picture,
+        uni_name: req.user.uni_name,
+        isFavourite: friendship.isFavourite,
+      } };
+
+      //Create friend request notification
+    const notification = new Notification({
+      recipient: friendship.requester.toString(),
+      payload: `${req.user.first_name} ${req.user.last_name} has accepted your friend request`,
+      type: 'fr_accepted'
+    });
+    await notification.save();
+
+      // REAL-TIME: Notify requester about acceptance
+      const io = req.app.get('io');
+      emitToUser(io, friendship.requester.toString(), 'friend_request_accepted', populatedFriendship);
+
+      res.status(200).json(friendship);
+
+    } else if (action === 'decline') {
+      friendship.status = 'blocked';
+      friendship.respondedAt = new Date();
+      await friendship.save();
+
+      /* 
+      // REAL-TIME: Notify requester about decline (optional)
+      const io = req.app.get('io');
+      emitToUser(io, friendship.requester._id, 'friend_request_declined', {
+        recipientId: userId
+      }); */
+
+      res.status(200).json({ message: 'Friend request declined' });
+    } else {
+      res.status(400).json({ message: 'This action is not permitted', CODE:'INVALID_ACTION' });
+    }
+
+  } catch (error) {
+    console.error('Error responding to friend request:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+exports.getNotifications = async (req, res) => {
+  try {
+    
+    const notifications = await Notification.find({recipient: req.userId});
+    res.status(200).json(notifications);
+  }catch (error) {
+    console.error('Error responding to friend request:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+exports.deleteNotification = async (req, res) => {
+  try {
+    const notification = await Notification.findByIdAndDelete(req.params.notificationId);
+    res.status(200).json(notification);
+  }catch (error) {
+    console.error('Error responding to friend request:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+exports.deleteAllNotifications = async (req, res) => {
+  try {
+    const response = await Notification.deleteMany({recipient: req.userId, type: {$ne:'fr'}});
+    res.status(200).json(response);
+  }catch (error) {
+    console.error('Error responding to friend request:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+exports.getFriends = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const friendships = await Friendship.find({
+      $or: [
+        { requester: userId, status: 'accepted' },
+        { recipient: userId, status: 'accepted' }
+      ]
+    }).populate('requester recipient', 'first_name last_name picture uni_name')
+
+    // Format friends list (exclude current user from each friendship)
+    const friends = friendships.map(friendship => {
+      const friend = friendship.requester._id.toString() === userId.toString() 
+        ? friendship.recipient 
+        : friendship.requester;
+      
+      return {
+        _id: friend._id,
+        first_name: friend.first_name,
+        last_name: friend.last_name,
+        picture: friend.picture,
+        uni_name: friend.uni_name,
+        isFavourite: friendship.isFavourite,
+      };
+    });
+
+    return res.status(200).json(friends);
+
+  } catch (error) {
+    console.error('Error fetching friends:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
 exports.getStudent = async (req, res) => {
   try {
     const {id} = req.params
@@ -113,16 +348,35 @@ exports.getStudent = async (req, res) => {
       return res.status(404).json({ message: 'Student not found' });
     }
 
+    // Check if friendship already exists
+    const existingFriendship = await Friendship.findOne({
+      $or: [
+        { requester: id, recipient: req.userId },
+        { requester: req.userId, recipient: id }
+      ], status:'accepted'
+    });
+
     // Conditionally remove private fields based on `privacy` settings
     const privacy = student.privacy ?? {};
-
-    if (privacy.picture !== 2 && student.picture ) delete student.picture;
-    if (privacy.email !== 2) delete student.email;
-    if (privacy.dob !== 2) delete student.dob;
-    else student.age = getAgeInYears(student.dob);
-    if (privacy.phone_number !== 2 && student.phone_number) delete student.phone_number;
-    if (privacy.gpa !== 2 && student.gpa) delete student.gpa;
-    if (privacy.learning_style !== 2) delete student.learning_style;
+    if(existingFriendship)
+    {
+      if (privacy.picture < 1 && student.picture ) delete student.picture;
+      if (privacy.email < 1) delete student.email;
+      if (privacy.dob < 1) delete student.dob;
+      else student.age = getAgeInYears(student.dob);
+      if (privacy.phone_number < 1 && student.phone_number) delete student.phone_number;
+      if (privacy.gpa < 1 && student.gpa) delete student.gpa;
+      if (privacy.learning_style < 1) delete student.learning_style;
+    } else {
+      if (privacy.picture !== 2 && student.picture ) delete student.picture;
+      if (privacy.email !== 2) delete student.email;
+      if (privacy.dob !== 2) delete student.dob;
+      else student.age = getAgeInYears(student.dob);
+      if (privacy.phone_number !== 2 && student.phone_number) delete student.phone_number;
+      if (privacy.gpa !== 2 && student.gpa) delete student.gpa;
+      if (privacy.learning_style !== 2) delete student.learning_style;
+    }
+    
 
     return res.status(200).json(student)
     
@@ -248,7 +502,7 @@ exports.updateQuestions = async (req, res) => {
 
     const bulkOps = [];
 
-    // 🔹 Handle single-answer case first
+    // Handle single-answer case first
     if (incomingAnswers.length === 1) {
       const { q, answer } = incomingAnswers[0];
       const existing = existingAnswers[q-1]
@@ -262,7 +516,7 @@ exports.updateQuestions = async (req, res) => {
 
       
     } else {
-      // 🔹 Handle multiple-answer case
+      // Handle multiple-answer case
       for (const { q, answer } of incomingAnswers) {
         const existing = existingAnswers[q-1];
 
@@ -431,7 +685,7 @@ exports.getSimilarity = async (req, res) => {
       { id1: req.userId, id2: req.params.id},
       { database: "neo4j" }
     );
-    if(records.length===0) return res.status(404).json({message: 'Either of you have not calculated their learning style.'});
+    if(records.length===0) return res.status(404).json({message: 'Either of you have not calculated their learning style.', code: 'NO_LEARNING_STYLE'});
     
     const similarity = Math.round(records[0].toObject().similarity);
     //console.log(similarity);
@@ -468,9 +722,7 @@ exports.getSimilarities = async (req, res) => {
     
     const recordsObj = records.map(record=>record.toObject()).filter(record=>record.similarity>=40);
 
-    //console.log(page);
-    //console.log(recordsObj)
-    //console.log('\n')
+    
     if(recordsObj.length===0) return res.status(200).json({students: [], currentPage:page, hasMore: false});
 
     const objectIds = recordsObj.map(record => new ObjectId(record.id));
@@ -534,32 +786,4 @@ exports.getOneGroup = async (req, res) => {
   }
 }
 
-const addToGraph = async (student) => {
-  
-  try {
-    let { records } = await driver.executeQuery(
-      "CREATE (p:Student{id: $id, name: $name }) RETURN p",
-      { id: student.id, name: `${student.first_name} ${student.last_name}` },
-      { database: "neo4j" }
-    );
-    
 
-    for(let i = 0; i < 44; i++)
-    {
-        const name = `${student.questions[i].answer}${student.questions[i].q}`
-        let {records} = await driver.executeQuery(
-            'MATCH (s:Student {id: $id}) MATCH (o:Option {name: $name}) CREATE (s)-[:SELECTED]->(o)',
-              { id: student.id, name: name },
-              { database: 'neo4j' }
-        )
-        console.log('DONE ADDING TO GRAPH')
-          return true;
-    }
-
-  }catch (err) {
-    console.error('Cant add to Graph',err);
-    return false;
-  } 
-  
-  
-}
