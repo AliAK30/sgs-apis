@@ -702,7 +702,7 @@ exports.getSimilarities = async (req, res) => {
       `MATCH (s1: Student {id: $id})-[:SELECTED]->(opt:Option)<-[:SELECTED]-(s2:Student) \
       WITH s1, s2, count(opt) as options \
       RETURN s2.id as id, s2.name as full_name, toFloat(options)/(88-options)*100 as similarity \
-      ORDER BY similarity DESC \
+      ORDER BY similarity DESC, id ASC \
       SKIP $skip \
       LIMIT $limit`,
       {
