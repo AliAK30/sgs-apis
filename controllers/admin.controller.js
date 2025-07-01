@@ -407,6 +407,16 @@ exports.deleteGroup = async (req, res) => {
   }
 }
 
+exports.getAdmins = async (req, res) => {
+  try {
+    const admins = await Admin.find({});
+    res.status(200).json(admins);
+  } catch (err) {
+    console.error('Error fetching Admins:', error);
+    return res.status(500).json({ message: 'Unknown Error while fetching admins' });
+  }
+}
+
 exports.deleteAdmin = async (req, res) => {
   await Admin.findByIdAndDelete(req.params.id).then(
     (admin) => {

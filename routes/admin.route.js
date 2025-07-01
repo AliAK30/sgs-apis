@@ -6,10 +6,10 @@ const checkDuplicateEmail = require("../middlewares/checkDuplicateEmail")
 const {checkRoleSysAdmin, checkRoleAdmin} = require("../middlewares/checkRole")
 
 router.post("/login", controller.login);
-
+router.get("/", verifyJwt, checkRoleAdmin, controller.getAdmins)
 router.post("/register", verifyJwt, checkRoleSysAdmin, checkDuplicateEmail, verifyEmail, controller.registerAdmin);
 router.get("/students/count", verifyJwt, checkRoleAdmin, controller.getStudentsCount)
-router.get("/students/search", verifyJwt, controller.searchStudents);
+router.get("/students/search", verifyJwt,checkRoleAdmin, controller.searchStudents);
 router.get("/groups/count", verifyJwt, checkRoleAdmin, controller.getGroupsCount)
 router.post("/groups/generate", verifyJwt, checkRoleAdmin, controller.generateGroup)
 router.post("/groups/create", verifyJwt, checkRoleAdmin, controller.createGroup)
