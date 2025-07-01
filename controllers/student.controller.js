@@ -162,14 +162,14 @@ exports.sendFriendRequest =  async (req, res) => {
 
     // Populate requester details for real-time notification
     
-    const populatedFriendship = {recipientId: recipientId, requester: {
+    const populatedFriendship = {
         _id: req.userId,
         first_name: req.user.first_name,
         last_name: req.user.last_name,
         picture: req.user.picture,
         uni_name: req.user.uni_name,
         friendshipId: friendship._id
-      } };
+    };
 
     //Create friend request notification
     const notification = new Notification({
@@ -224,19 +224,19 @@ exports.respondToFriendRequest = async (req, res) => {
         
 
       // Populate both users for real-time notification
-      const populatedFriendship = {requesterId: friendship.requester.toString(), recipient: {
+      const populatedFriendship = {
         _id: req.userId,
         first_name: req.user.first_name,
         last_name: req.user.last_name,
         picture: req.user.picture,
         uni_name: req.user.uni_name,
         isFavourite: friendship.isFavourite,
-      } };
+      };
 
       //Create friend request notification
     const notification = new Notification({
       recipient: friendship.requester.toString(),
-      payload: `${req.user.first_name} ${req.user.last_name} has accepted your friend request`,
+      payload: `${req.user.first_name} ${req.user.last_name}`,
       type: 'fr_accepted'
     });
     await notification.save();
@@ -251,13 +251,6 @@ exports.respondToFriendRequest = async (req, res) => {
       friendship.status = 'blocked';
       friendship.respondedAt = new Date();
       await friendship.save();
-
-      /* 
-      // REAL-TIME: Notify requester about decline (optional)
-      const io = req.app.get('io');
-      emitToUser(io, friendship.requester._id, 'friend_request_declined', {
-        recipientId: userId
-      }); */
 
       res.status(200).json({ message: 'Friend request declined' });
     } else {
@@ -624,7 +617,7 @@ exports.calculateLearningStyle = async (req, res) => {
     if (result.modifiedCount >= 0) {
       console.log("Learning style updated successfully.");
       student.learning_style = learning_style;
-      return res.status(200).json({student});
+      
       if(addToGraph(student))
       {
         return res.status(200).json({student: student,message: "Learning style updated successfully.",});

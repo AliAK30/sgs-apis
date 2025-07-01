@@ -20,6 +20,7 @@ const groupSchema = new mongoose.Schema({
     enum: ["any", "Male", "Female"],
     default: "any",
   },
+  totalStudents: {type:Number, default:0},
   students: [
     {
       type: mongoose.Schema.Types.ObjectId,
@@ -72,6 +73,11 @@ groupSchema.pre("save", function (next) {
     this.name =
       this.name.trim().charAt(0).toUpperCase() + this.name.trim().slice(1);
   }
+  // Set totalStudents to length of students array
+  if (Array.isArray(this.students)) {
+    this.totalStudents = this.students.length;
+  }
+  
   next();
 });
 

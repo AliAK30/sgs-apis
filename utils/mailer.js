@@ -4,12 +4,12 @@ const host = process.env.NODE_ENV === 'production'
     ? 'localhost' // Local connection string
     : 'edumatch.southeastasia.cloudapp.azure.com'; // Public connection string
 
-const redisClient = 12 /* new Redis({
+const redisClient =  new Redis({
   host: host,
   port: 6379,
   // password: 'password', // this is for password
   retryStrategy: (times) => Math.min(times * 50, 5000), // Auto-reconnect
-}); */
+}); 
 
 
 exports.sendOTPEmail = async (email, otp) => {
@@ -38,7 +38,7 @@ exports.sendOTPEmail = async (email, otp) => {
         const res = await response.json();
         if(res.data.errorCode === "INVALID_OAUTHTOKEN")
         {
-          console.log("IM HERE")
+          
           //GET ACCESS TOKEN FROM REFRESH TOKEN
           const refreshUrl = `https://accounts.zoho.com/oauth/v2/token?refresh_token=${process.env.ZOHO_REFRESH_TOKEN}&grant_type=refresh_token&client_id=${process.env.ZOHO_CLIENT_ID}&client_secret=${process.env.ZOHO_CLIENT_SECRET}`
           const response2 = await fetch(refreshUrl, {

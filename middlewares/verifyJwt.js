@@ -7,6 +7,7 @@ verifyToken = async (req, res, next) => {
   try {
     let token;
     try {
+      
       token = req.headers.authorization.split(" ")[1]
     } catch(err) {
       console.log(`IP: ${req.ip}`);
@@ -33,7 +34,7 @@ verifyToken = async (req, res, next) => {
   let User;
   if(req.baseUrl.substring(1) === "student") User = Student;
   else User = Admin;
-  const user = await User.findById(userId).select('_id first_name last_name email uni_id uni_name picture');
+  const user = await User.findById(userId).select('_id first_name last_name email uni_id uni_name picture role');
     
   if (!user || decoded.id !== userId) {
     if(res.edumatch_socket) return next(new Error('Invalid authentication'));
