@@ -13,7 +13,9 @@ verifyEmail = async (req, res, next) => {
             res.status(400).send({isEmailValid: false, message: "Email address does not exist, Pleae enter a valid Email", code: 'INVALID_EMAIL'})
             return;
         }
-        if(req.user.role==='system_admin') next();
+        if(req.user) {
+          if(req.user.role === 'system_admin') next();
+        } 
         else return res.status(200).send({isEmailValid: true, message: "Email address exists", code: 'VALID_EMAIL'});
         
       }
