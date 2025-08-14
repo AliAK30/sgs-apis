@@ -5,9 +5,12 @@ verifyEmail = async (req, res, next) => {
 
     const url = `https://api.quickemailverification.com/v1/verify?email=${req.body.email}&apikey=${process.env.API_KEY}`
     try {
+      console.log('0')
       const response = await fetch(url)
+      console.log('1')
       if (response.status === 200) {
         const resJson = await response.json()
+        console.log('2')
         if(resJson.result === "invalid")
         {
             res.status(400).send({isEmailValid: false, message: "Email address does not exist, Pleae enter a valid Email", code: 'INVALID_EMAIL'})
