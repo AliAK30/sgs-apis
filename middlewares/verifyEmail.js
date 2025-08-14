@@ -2,7 +2,7 @@
 
 verifyEmail = async (req, res, next) => {
   //return res.status(200).send({isEmailValid: true, message: "Email address exists", code: 'VALID_EMAIL'});
-       
+
     const url = `https://api.quickemailverification.com/v1/verify?email=${req.body.email}&apikey=${process.env.API_KEY}`
     try {
       const response = await fetch(url)
@@ -15,11 +15,14 @@ verifyEmail = async (req, res, next) => {
         }
         if(req.user) {
           if(req.user.role === 'system_admin') next();
-        } 
+        }
+
+        }
+
         else return res.status(200).send({isEmailValid: true, message: "Email address exists", code: 'VALID_EMAIL'});
-        
+
       }
-      
+
     } catch (err) {
       console.log(err.message)
       res.status(500).send(err.message)

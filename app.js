@@ -31,8 +31,7 @@ const server = http.createServer(app);
 
 const corsOptions = {
     origin: [
-      "https://edumatch.netlify.app", 
-      "http://localhost:8081",
+      "https://edumatch.netlify.app",
       //"https://localhost:8080",
       "https://edumatch.southeastasia.cloudapp.azure.com"
 
